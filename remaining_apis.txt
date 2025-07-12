@@ -1,0 +1,32 @@
+# ❌ 아직 구현되지 않은 API 목록
+
+## 1. SMS 인증 관련
+- [ ] POST /auth/send-sms : 인증번호 발송
+- [ ] POST /auth/verify-sms : 인증번호 검증
+- [ ] POST /auth/find-account : 아이디/휴대폰 일치 확인
+
+## 2. 상품 상세
+- [ ] GET /api/products/{id} : 상품 상세 조회
+
+## 3. 기타 기능
+- [ ] GET /api/posts/popular : 인기 게시글 목록
+- [ ] GET /api/posts/recent : 최신 게시글 목록
+- [ ] GET /api/search : 통합 검색 (게시글, 상품, 사용자)
+- [ ] POST /api/notifications/settings : 알림 설정 변경
+- [ ] GET /api/notifications/settings : 알림 설정 조회
+
+## 4. 관리자 추가 기능
+- [ ] GET /api/admin/statistics : 통계 데이터
+- [ ] GET /api/admin/reports : 신고 목록
+- [ ] POST /api/admin/reports/{reportId}/process : 신고 처리
+- [ ] GET /api/admin/logs : 시스템 로그
+- [ ] POST /api/admin/announcements : 공지사항 등록
+- [ ] GET /api/admin/announcements : 공지사항 목록
+- [ ] PUT /api/admin/announcements/{id} : 공지사항 수정
+- [ ] DELETE /api/admin/announcements/{id} : 공지사항 삭제
+
+# 우선순위
+1. 상품 상세 (핵심 기능)
+2. SMS 인증 (보안 강화)
+3. 기타 기능 (부가 기능)
+4. 관리자 추가 기능 (운영 편의성) 

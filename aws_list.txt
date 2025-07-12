@@ -1,0 +1,6 @@
+- [ ] 📦 **EC2**: Java Spring Boot 앱 실행 (서버 역할)
+- [ ] 💾 **RDS (PostgreSQL)**: 사용자/게시글 등 영구 데이터 저장
+- [ ] ⚡ **ElastiCache for Redis** (또는 EC2 + Redis): SMS 인증코드, 세션 등 임시 저장
+- [ ] ☁️ **S3**: 게시글/프로필 이미지 등 저장
+- [ ] 🔔 **AWS SNS** 또는 **FCM**: Firebase 연동하거나 AWS SNS 이용 가능
+- [ ] 🛡️ **Route 53 + ACM**: 도메인 설정 + HTTPS 인증서 발급 
