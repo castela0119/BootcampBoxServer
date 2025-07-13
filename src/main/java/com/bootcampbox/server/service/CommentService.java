@@ -193,4 +193,10 @@ public class CommentService {
         String msg = removed ? "신고가 취소되었습니다." : "해당 사용자는 이 댓글을 신고하지 않았습니다.";
         return new CommentActionDto.ActionResponse(msg, comment.getReportCount(), true);
     }
+
+    // Comment ID로 Comment 엔티티 조회 (내부용)
+    public Comment getCommentEntity(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다: " + commentId));
+    }
 } 

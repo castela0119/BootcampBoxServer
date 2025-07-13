@@ -1,5 +1,6 @@
 package com.bootcampbox.server.dto;
 
+import com.bootcampbox.server.domain.ReportType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,7 @@ public class PostActionDto {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor
     public static class ReportRequest {
-        private String reason;
+        private ReportType reportType;
+        private String additionalReason;
     }
 } 

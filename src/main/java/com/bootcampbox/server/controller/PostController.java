@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -69,5 +70,34 @@ public class PostController {
         log.info("게시글 삭제 요청: postId={}, userId={}", postId, userId);
         postService.deletePost(postId, userId);
         return ResponseEntity.ok().build();
+    }
+
+    // 태그 검색 관련 API들
+    @GetMapping("/search/tag/{tagName}")
+    public ResponseEntity<Page<PostDto.Response>> getPostsByTag(
+            @PathVariable String tagName,
+            Pageable pageable) {
+        log.info("태그별 게시글 검색: tagName={}", tagName);
+        Page<PostDto.Response> response = postService.getPostsByTag(tagName, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search/tags")
+    public ResponseEntity<Page<PostDto.Response>> getPostsByTags(
+            @RequestParam List<String> tagNames,
+            @RequestParam(defaultValue = "OR") String operator, // OR 또는 AND
+            Pageable pageable) {
+        log.info("다중 태그 게시글 검색: tagNames={}, operator={}", tagNames, operator);
+        Page<PostDto.Response> response = postService.getPostsByTags(tagNames, operator, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search/keyword")
+    public ResponseEntity<Page<PostDto.Response>> searchPostsByKeyword(
+            @RequestParam String keyword,
+            Pageable pageable) {
+        log.info("키워드 게시글 검색: keyword={}", keyword);
+        Page<PostDto.Response> response = postService.searchPostsByKeyword(keyword, pageable);
+        return ResponseEntity.ok(response);
     }
 } 

@@ -9,6 +9,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MyPageDto {
 
@@ -104,24 +105,28 @@ public class MyPageDto {
         private Long id;
         private String title;
         private String content;
-        private String category;
+        private List<String> tagNames;
         private int likeCount;
         private int commentCount;
         private int viewCount;
         private LocalDateTime createdAt;
         private String authorNickname;
+        private String authorUserType; // 작성 당시 사용자의 신분 type
 
         public static MyPostResponse from(Post post) {
             MyPostResponse response = new MyPostResponse();
             response.setId(post.getId());
             response.setTitle(post.getTitle());
             response.setContent(post.getContent());
-            response.setCategory(post.getCategory());
+            response.setTagNames(post.getTags().stream()
+                    .map(tag -> tag.getName())
+                    .collect(Collectors.toList()));
             response.setLikeCount(post.getLikeCount());
             response.setCommentCount(post.getCommentCount());
             response.setViewCount(post.getViewCount());
             response.setCreatedAt(post.getCreatedAt());
             response.setAuthorNickname(post.getUser().getNickname());
+            response.setAuthorUserType(post.getAuthorUserType()); // 작성 당시 신분 type
             return response;
         }
     }
@@ -133,12 +138,13 @@ public class MyPageDto {
         private Long id;
         private String title;
         private String content;
-        private String category;
+        private List<String> tagNames;
         private int likeCount;
         private int commentCount;
         private int viewCount;
         private LocalDateTime createdAt;
         private String authorNickname;
+        private String authorUserType; // 작성 당시 사용자의 신분 type
         private LocalDateTime likedAt; // 좋아요한 시간
 
         public static MyLikedPostResponse from(Post post, LocalDateTime likedAt) {
@@ -146,12 +152,15 @@ public class MyPageDto {
             response.setId(post.getId());
             response.setTitle(post.getTitle());
             response.setContent(post.getContent());
-            response.setCategory(post.getCategory());
+            response.setTagNames(post.getTags().stream()
+                    .map(tag -> tag.getName())
+                    .collect(Collectors.toList()));
             response.setLikeCount(post.getLikeCount());
             response.setCommentCount(post.getCommentCount());
             response.setViewCount(post.getViewCount());
             response.setCreatedAt(post.getCreatedAt());
             response.setAuthorNickname(post.getUser().getNickname());
+            response.setAuthorUserType(post.getAuthorUserType()); // 작성 당시 신분 type
             response.setLikedAt(likedAt);
             return response;
         }
@@ -164,12 +173,13 @@ public class MyPageDto {
         private Long id;
         private String title;
         private String content;
-        private String category;
+        private List<String> tagNames;
         private int likeCount;
         private int commentCount;
         private int viewCount;
         private LocalDateTime createdAt;
         private String authorNickname;
+        private String authorUserType; // 작성 당시 사용자의 신분 type
         private LocalDateTime bookmarkedAt; // 북마크한 시간
 
         public static MyBookmarkedPostResponse from(Post post, LocalDateTime bookmarkedAt) {
@@ -177,12 +187,15 @@ public class MyPageDto {
             response.setId(post.getId());
             response.setTitle(post.getTitle());
             response.setContent(post.getContent());
-            response.setCategory(post.getCategory());
+            response.setTagNames(post.getTags().stream()
+                    .map(tag -> tag.getName())
+                    .collect(Collectors.toList()));
             response.setLikeCount(post.getLikeCount());
             response.setCommentCount(post.getCommentCount());
             response.setViewCount(post.getViewCount());
             response.setCreatedAt(post.getCreatedAt());
             response.setAuthorNickname(post.getUser().getNickname());
+            response.setAuthorUserType(post.getAuthorUserType()); // 작성 당시 신분 type
             response.setBookmarkedAt(bookmarkedAt);
             return response;
         }

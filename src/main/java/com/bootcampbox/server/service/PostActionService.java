@@ -101,14 +101,16 @@ public class PostActionService {
         PostReport postReport = new PostReport();
         postReport.setPost(post);
         postReport.setUser(user);
-        postReport.setReason(request.getReason());
+        postReport.setReportType(request.getReportType());
+        postReport.setAdditionalReason(request.getAdditionalReason());
+        postReport.setStatus(ReportStatus.PENDING);
         postReportRepository.save(postReport);
 
         // 게시글 신고 수 증가
         post.setReportCount(post.getReportCount() + 1);
         postRepository.save(post);
 
-        log.info("게시글 신고 완료 - 게시글: {}, 사용자: {}, 사유: {}", postId, username, request.getReason());
+        log.info("게시글 신고 완료 - 게시글: {}, 사용자: {}, 신고유형: {}", postId, username, request.getReportType());
         
         return new PostActionDto.ActionResponse(
                 "게시글 신고 완료", 

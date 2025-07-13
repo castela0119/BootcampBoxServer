@@ -62,7 +62,7 @@ public class PostActionController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String username = authentication.getName();
             
-            log.info("게시글 신고 요청 - 게시글: {}, 사용자: {}, 사유: {}", postId, username, request.getReason());
+            log.info("게시글 신고 요청 - 게시글: {}, 사용자: {}, 분류: {}", postId, username, request.getReportType());
             PostActionDto.ActionResponse response = postActionService.reportPost(postId, username, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

@@ -51,6 +51,7 @@ public class AuthController {
         response.put("success", true);
         response.put("message", "인증코드가 이메일로 발송되었습니다. (모의발송)");
         response.put("timestamp", LocalDateTime.now().toString());
+        response.put("verificationCode", code); // 개발/테스트용 인증코드 포함
         
         return ResponseEntity.ok(response);
     }

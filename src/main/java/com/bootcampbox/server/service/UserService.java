@@ -47,8 +47,24 @@ public class UserService {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
         
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new IllegalArgumentException("이미 가입된 휴대폰 번호입니다.");
+        // username 설정 (전화번호가 유효하면 전화번호, 아니면 이메일 사용)
+        String username;
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            username = request.getPhoneNumber().trim();
+        } else {
+            username = request.getEmail();
+        }
+        
+        // username 중복 검사
+        if (userRepository.existsByUsername(username)) {
+            throw new IllegalArgumentException("이미 사용 중인 사용자명입니다.");
+        }
+        
+        // 전화번호가 제공된 경우에만 중복 검사
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalArgumentException("이미 가입된 휴대폰 번호입니다.");
+            }
         }
         
         if (userRepository.existsByNickname(request.getNickname())) {
@@ -61,8 +77,14 @@ public class UserService {
         // User 엔티티 생성
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setUsername(request.getPhoneNumber()); // 임시로 phoneNumber를 username으로 사용
-        user.setPhoneNumber(request.getPhoneNumber());
+        user.setUsername(username); // 위에서 정의된 username 사용
+        
+        // phoneNumber 설정 (빈 문자열이면 null로 저장)
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber(request.getPhoneNumber().trim());
+        } else {
+            user.setPhoneNumber(null);
+        }
         user.setNickname(request.getNickname());
         user.setPassword(encodedPassword);
         user.setUserType(request.getUserType());
@@ -252,40 +274,27 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         
         long totalPosts = postRepository.countByUser(user);
-        long totalComments = commentRepository.countByUser(user); // 실제 댓글 수로 변경
+        long totalComments = commentRepository.countByUser(user);
         long totalLikes = postLikeRepository.countByUser(user);
         long totalBookmarks = bookmarkRepository.countByUser(user);
         
-        // 마지막 활동 시간 계산 (가장 최근 활동)
-        LocalDateTime lastPostAt = postRepository.findTopByUserOrderByCreatedAtDesc(user)
+        // 마지막 활동 시간 계산 (간단한 버전)
+        LocalDateTime lastActivityAt = postRepository.findTopByUserOrderByCreatedAtDesc(user)
                 .map(Post::getCreatedAt)
                 .orElse(null);
         
-        LocalDateTime lastLikeAt = postLikeRepository.findTopByUserOrderByCreatedAtDesc(user)
-                .map(PostLike::getCreatedAt)
-                .orElse(null);
-        
-        LocalDateTime lastBookmarkAt = bookmarkRepository.findTopByUserOrderByCreatedAtDesc(user)
-                .map(Bookmark::getCreatedAt)
-                .orElse(null);
-        
-        LocalDateTime lastActivityAt = null;
-        if (lastPostAt != null && (lastActivityAt == null || lastPostAt.isAfter(lastActivityAt))) {
-            lastActivityAt = lastPostAt;
-        }
-        if (lastLikeAt != null && (lastActivityAt == null || lastLikeAt.isAfter(lastActivityAt))) {
-            lastActivityAt = lastLikeAt;
-        }
-        if (lastBookmarkAt != null && (lastActivityAt == null || lastBookmarkAt.isAfter(lastActivityAt))) {
-            lastActivityAt = lastBookmarkAt;
-        }
-        
         return new MyPageDto.MyActivitySummaryResponse(
-            (int) totalPosts, 
-            (int) totalComments, // 0 → 실제 값
-            (int) totalLikes, 
-            (int) totalBookmarks, 
-            lastActivityAt
+                (int) totalPosts,
+                (int) totalComments,
+                (int) totalLikes,
+                (int) totalBookmarks,
+                lastActivityAt
         );
+    }
+
+    // User ID로 User 엔티티 조회 (내부용)
+    public User getUserEntity(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
     }
 } 
