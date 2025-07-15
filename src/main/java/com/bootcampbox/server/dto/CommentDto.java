@@ -42,7 +42,7 @@ public class CommentDto {
         private List<CommentResponse> replies; // 대댓글 목록
         private boolean isAuthor; // 현재 사용자가 작성자인지 여부
 
-        public static CommentResponse from(Comment comment, String currentUsername) {
+        public static CommentResponse from(Comment comment, Long currentUserId) {
             CommentResponse response = new CommentResponse();
             response.setId(comment.getId());
             response.setContent(comment.getContent());
@@ -53,7 +53,22 @@ public class CommentDto {
             response.setParentId(comment.getParent() != null ? comment.getParent().getId() : null);
             response.setCreatedAt(comment.getCreatedAt());
             response.setUpdatedAt(comment.getUpdatedAt());
-            response.isAuthor = comment.getAuthorUsername().equals(currentUsername);
+            
+            // ID 기반 비교 (가장 안전)
+            response.isAuthor = comment.getAuthorId() != null && 
+                               currentUserId != null && 
+                               comment.getAuthorId().equals(currentUserId);
+            return response;
+        }
+        
+        // 대댓글 목록을 포함한 응답 생성
+        public static CommentResponse fromWithReplies(Comment comment, List<Comment> replies, Long currentUserId) {
+            CommentResponse response = from(comment, currentUserId);
+            if (replies != null && !replies.isEmpty()) {
+                response.setReplies(replies.stream()
+                    .map(reply -> from(reply, currentUserId))
+                    .collect(Collectors.toList()));
+            }
             return response;
         }
     }
@@ -68,13 +83,28 @@ public class CommentDto {
         private boolean hasNext;
         private boolean hasPrevious;
 
+        // 기본 생성자 추가
+        public CommentListResponse() {
+        }
+
+        public CommentListResponse(List<CommentResponse> comments, long totalComments, 
+                                 int currentPage, int totalPages, 
+                                 boolean hasNext, boolean hasPrevious) {
+            this.comments = comments;
+            this.totalComments = totalComments;
+            this.currentPage = currentPage;
+            this.totalPages = totalPages;
+            this.hasNext = hasNext;
+            this.hasPrevious = hasPrevious;
+        }
+        
         public static CommentListResponse from(List<Comment> comments, long totalComments, 
                                              int currentPage, int totalPages, 
                                              boolean hasNext, boolean hasPrevious, 
-                                             String currentUsername) {
+                                             Long currentUserId) {
             CommentListResponse response = new CommentListResponse();
             response.setComments(comments.stream()
-                    .map(comment -> CommentResponse.from(comment, currentUsername))
+                    .map(comment -> CommentResponse.from(comment, currentUserId))
                     .collect(Collectors.toList()));
             response.setTotalComments(totalComments);
             response.setCurrentPage(currentPage);

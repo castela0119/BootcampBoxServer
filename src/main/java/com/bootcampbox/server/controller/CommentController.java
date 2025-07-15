@@ -47,7 +47,7 @@ public class CommentController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String username = authentication.getName();
             
-            log.info("댓글 목록 조회 요청 - 게시글: {}, 페이지: {}, 크기: {}", postId, page, size);
+            log.info("댓글 목록 조회 요청 - 게시글: {}, 페이지: {}, 크기: {}, 사용자: {}", postId, page, size, username);
             CommentDto.CommentListResponse response = commentService.getComments(postId, page, size, username);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

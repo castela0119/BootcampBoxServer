@@ -56,7 +56,7 @@ public class CommentService {
         }
 
         Comment savedComment = commentRepository.save(comment);
-        return CommentDto.CommentResponse.from(savedComment, username);
+        return CommentDto.CommentResponse.from(savedComment, user.getId());
     }
 
     public CommentDto.CommentListResponse getComments(Long postId, int page, int size, String username) {
@@ -65,20 +65,26 @@ public class CommentService {
         
         List<Comment> comments = commentPage.getContent();
         
+        // 현재 사용자 ID 가져오기
+        final Long currentUserId = userRepository.findByUsername(username)
+                .map(User::getId)
+                .orElse(null);
+        
         // 각 댓글에 대댓글 추가
-        for (Comment comment : comments) {
-            List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(comment.getId());
-            // 대댓글은 CommentResponse에 포함되도록 처리
-        }
+        List<CommentDto.CommentResponse> commentResponses = comments.stream()
+            .map(comment -> {
+                List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(comment.getId());
+                return CommentDto.CommentResponse.fromWithReplies(comment, replies, currentUserId);
+            })
+            .collect(Collectors.toList());
 
-        return CommentDto.CommentListResponse.from(
-                comments,
+        return new CommentDto.CommentListResponse(
+                commentResponses,
                 commentPage.getTotalElements(),
                 commentPage.getNumber(),
                 commentPage.getTotalPages(),
                 commentPage.hasNext(),
-                commentPage.hasPrevious(),
-                username
+                commentPage.hasPrevious()
         );
     }
 
@@ -95,7 +101,7 @@ public class CommentService {
         comment.setUpdatedAt(LocalDateTime.now());
 
         Comment updatedComment = commentRepository.save(comment);
-        return CommentDto.CommentResponse.from(updatedComment, username);
+        return CommentDto.CommentResponse.from(updatedComment, comment.getUser().getId());
     }
 
     public CommentDto.SimpleResponse deleteComment(Long commentId, String username) {
@@ -121,7 +127,7 @@ public class CommentService {
         Pageable pageable = PageRequest.of(page, size);
         Page<Comment> commentPage = commentRepository.findByUsernameOrderByCreatedAtDesc(username, pageable);
         
-        return commentPage.map(comment -> CommentDto.CommentResponse.from(comment, username));
+        return commentPage.map(comment -> CommentDto.CommentResponse.from(comment, comment.getUser().getId()));
     }
 
     public CommentActionDto.UserListResponse getCommentLikes(Long commentId) {
