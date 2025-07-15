@@ -222,6 +222,32 @@ public class CommentService {
         return new CommentActionDto.ActionResponse(msg, comment.getReportCount(), true);
     }
 
+    public CommentActionDto.ActionResponse toggleCommentLike(Long commentId, String username) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 이미 좋아요를 눌렀는지 확인
+        boolean alreadyLiked = comment.getLikedUsers().contains(user);
+        
+        if (alreadyLiked) {
+            // 좋아요 취소
+            boolean removed = comment.unlike(user);
+            commentRepository.save(comment);
+
+            String msg = "댓글 좋아요를 취소했습니다.";
+            return new CommentActionDto.ActionResponse(msg, comment.getLikeCount(), true);
+        } else {
+            // 좋아요 추가
+            boolean added = comment.like(user);
+            commentRepository.save(comment);
+
+            String msg = "댓글에 좋아요를 눌렀습니다.";
+            return new CommentActionDto.ActionResponse(msg, comment.getLikeCount(), true);
+        }
+    }
+
     // Comment ID로 Comment 엔티티 조회 (내부용)
     public Comment getCommentEntity(Long commentId) {
         return commentRepository.findById(commentId)

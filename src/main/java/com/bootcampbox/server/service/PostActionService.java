@@ -84,6 +84,57 @@ public class PostActionService {
         );
     }
 
+    // === 게시글 좋아요 토글 ===
+    public PostActionDto.ActionResponse togglePostLike(Long postId, String username) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 이미 좋아요를 눌렀는지 확인
+        boolean alreadyLiked = postLikeRepository.findByPostIdAndUserId(postId, user.getId()).isPresent();
+        
+        if (alreadyLiked) {
+            // 좋아요 취소
+            PostLike postLike = postLikeRepository.findByPostIdAndUserId(postId, user.getId())
+                    .orElseThrow(() -> new RuntimeException("좋아요를 찾을 수 없습니다."));
+            
+            postLikeRepository.delete(postLike);
+            post.setLikeCount(Math.max(0, post.getLikeCount() - 1));
+            postRepository.save(post);
+
+            log.info("게시글 좋아요 취소 완료 - 게시글: {}, 사용자: {}", postId, username);
+            
+            return new PostActionDto.ActionResponse(
+                    "게시글 좋아요가 취소되었습니다.", 
+                    post.getLikeCount(), 
+                    false, 
+                    isReported(postId, user.getId()), 
+                    isBookmarked(postId, user.getId())
+            );
+        } else {
+            // 좋아요 추가
+            PostLike postLike = new PostLike();
+            postLike.setPost(post);
+            postLike.setUser(user);
+            postLikeRepository.save(postLike);
+
+            post.setLikeCount(post.getLikeCount() + 1);
+            postRepository.save(post);
+
+            log.info("게시글 좋아요 완료 - 게시글: {}, 사용자: {}", postId, username);
+            
+            return new PostActionDto.ActionResponse(
+                    "게시글에 좋아요를 눌렀습니다.", 
+                    post.getLikeCount(), 
+                    true, 
+                    isReported(postId, user.getId()), 
+                    isBookmarked(postId, user.getId())
+            );
+        }
+    }
+
     // === 게시글 신고 ===
     public PostActionDto.ActionResponse reportPost(Long postId, String username, PostActionDto.ReportRequest request) {
         Post post = postRepository.findById(postId)

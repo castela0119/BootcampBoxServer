@@ -17,6 +17,25 @@ public class CommentActionController {
 
     private final CommentService commentService;
 
+    @PostMapping("/{commentId}/toggle-like")
+    public ResponseEntity<CommentActionDto.ActionResponse> toggleCommentLike(@PathVariable Long commentId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            log.info("댓글 좋아요 토글 요청 - 댓글: {}, 사용자: {}", commentId, username);
+            CommentActionDto.ActionResponse response = commentService.toggleCommentLike(commentId, username);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("댓글 좋아요 토글 오류: ", e);
+            return ResponseEntity.badRequest().body(
+                new CommentActionDto.ActionResponse("댓글 좋아요 토글 실패: " + e.getMessage(), 0, false)
+            );
+        }
+    }
+
+    // === 댓글 좋아요 (기존 방식 - 주석 처리) ===
+    /*
     @PostMapping("/{commentId}/like")
     public ResponseEntity<CommentActionDto.ActionResponse> likeComment(@PathVariable Long commentId) {
         try {
@@ -50,6 +69,7 @@ public class CommentActionController {
             );
         }
     }
+    */
 
     @PostMapping("/{commentId}/report")
     public ResponseEntity<CommentActionDto.ActionResponse> reportComment(@PathVariable Long commentId) {
