@@ -6,6 +6,8 @@ import com.bootcampbox.server.domain.User;
 import com.bootcampbox.server.dto.PostDto;
 import com.bootcampbox.server.repository.PostRepository;
 import com.bootcampbox.server.repository.UserRepository;
+import com.bootcampbox.server.repository.PostLikeRepository;
+import com.bootcampbox.server.repository.BookmarkRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,8 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final BookmarkRepository bookmarkRepository;
     private final TagService tagService;
 
     public PostDto.Response createPost(Long userId, PostDto.CreateRequest request) {
@@ -61,6 +65,27 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         return PostDto.Response.from(post);
+    }
+
+    public PostDto.Response getPost(Long postId, String username) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        
+        // 현재 사용자 정보 가져오기
+        User currentUser = userRepository.findByUsername(username)
+                .orElse(null);
+        
+        boolean isLiked = false;
+        boolean isBookmarked = false;
+        
+        if (currentUser != null) {
+            // 좋아요 상태 확인
+            isLiked = postLikeRepository.findByPostIdAndUserId(postId, currentUser.getId()).isPresent();
+            // 북마크 상태 확인
+            isBookmarked = bookmarkRepository.findByPostIdAndUserId(postId, currentUser.getId()).isPresent();
+        }
+        
+        return PostDto.Response.from(post, currentUser != null ? currentUser.getId() : null, isLiked, isBookmarked);
     }
 
     public Page<PostDto.Response> getAllPosts(Pageable pageable) {

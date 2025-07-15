@@ -80,8 +80,19 @@ public class PostDto {
         private boolean canBeDeleted; // 삭제 가능 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
         private List<String> tagNames; // 태그명 목록
+        
+        // 좋아요 관련 필드
+        private int likeCount; // 좋아요 수
+        private boolean isLiked; // 현재 사용자가 좋아요를 눌렀는지 여부
+        private boolean isBookmarked; // 현재 사용자가 북마크했는지 여부
+        private int commentCount; // 댓글 수
+        private int viewCount; // 조회수
 
         public static Response from(Post post) {
+            return from(post, null, false, false);
+        }
+
+        public static Response from(Post post, Long currentUserId, boolean isLiked, boolean isBookmarked) {
             String displayNickname = post.isAnonymous() ? 
                 post.getAnonymousNickname() : 
                 post.getUser().getNickname();
@@ -104,6 +115,11 @@ public class PostDto {
                     .canBeDeleted(post.canBeDeleted())
                     .authorUserType(post.getAuthorUserType()) // 작성 당시 신분 type
                     .tagNames(tagNames)
+                    .likeCount(post.getLikeCount())
+                    .isLiked(isLiked)
+                    .isBookmarked(isBookmarked)
+                    .commentCount(post.getCommentCount())
+                    .viewCount(post.getViewCount())
                     .build();
         }
     }

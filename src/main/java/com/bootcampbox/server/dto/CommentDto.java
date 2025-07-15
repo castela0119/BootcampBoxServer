@@ -41,8 +41,16 @@ public class CommentDto {
         private LocalDateTime updatedAt;
         private List<CommentResponse> replies; // 대댓글 목록
         private boolean isAuthor; // 현재 사용자가 작성자인지 여부
+        
+        // 좋아요 관련 필드
+        private int likeCount; // 좋아요 수
+        private boolean isLiked; // 현재 사용자가 좋아요를 눌렀는지 여부
 
         public static CommentResponse from(Comment comment, Long currentUserId) {
+            return from(comment, currentUserId, false);
+        }
+
+        public static CommentResponse from(Comment comment, Long currentUserId, boolean isLiked) {
             CommentResponse response = new CommentResponse();
             response.setId(comment.getId());
             response.setContent(comment.getContent());
@@ -58,15 +66,24 @@ public class CommentDto {
             response.isAuthor = comment.getAuthorId() != null && 
                                currentUserId != null && 
                                comment.getAuthorId().equals(currentUserId);
+            
+            // 좋아요 관련 정보
+            response.likeCount = comment.getLikeCount();
+            response.isLiked = isLiked;
+            
             return response;
         }
         
         // 대댓글 목록을 포함한 응답 생성
         public static CommentResponse fromWithReplies(Comment comment, List<Comment> replies, Long currentUserId) {
-            CommentResponse response = from(comment, currentUserId);
+            return fromWithReplies(comment, replies, currentUserId, false);
+        }
+        
+        public static CommentResponse fromWithReplies(Comment comment, List<Comment> replies, Long currentUserId, boolean isLiked) {
+            CommentResponse response = from(comment, currentUserId, isLiked);
             if (replies != null && !replies.isEmpty()) {
                 response.setReplies(replies.stream()
-                    .map(reply -> from(reply, currentUserId))
+                    .map(reply -> from(reply, currentUserId, false)) // 대댓글의 좋아요 상태는 별도 처리 필요
                     .collect(Collectors.toList()));
             }
             return response;

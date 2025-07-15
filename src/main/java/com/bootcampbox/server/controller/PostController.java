@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -31,9 +33,17 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostDto.Response> getPost(@PathVariable Long postId) {
-        log.info("게시글 조회 요청: postId={}", postId);
-        PostDto.Response response = postService.getPost(postId);
-        return ResponseEntity.ok(response);
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            log.info("게시글 조회 요청: postId={}, username={}", postId, username);
+            PostDto.Response response = postService.getPost(postId, username);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping

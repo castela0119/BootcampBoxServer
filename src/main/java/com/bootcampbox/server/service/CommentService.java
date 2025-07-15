@@ -74,7 +74,29 @@ public class CommentService {
         List<CommentDto.CommentResponse> commentResponses = comments.stream()
             .map(comment -> {
                 List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(comment.getId());
-                return CommentDto.CommentResponse.fromWithReplies(comment, replies, currentUserId);
+                
+                // 댓글의 좋아요 상태 확인
+                boolean isLiked = false;
+                if (currentUserId != null) {
+                    isLiked = comment.getLikedUsers().stream()
+                            .anyMatch(user -> user.getId().equals(currentUserId));
+                }
+                
+                // 대댓글들의 좋아요 상태도 확인
+                List<CommentDto.CommentResponse> replyResponses = replies.stream()
+                    .map(reply -> {
+                        boolean replyIsLiked = false;
+                        if (currentUserId != null) {
+                            replyIsLiked = reply.getLikedUsers().stream()
+                                    .anyMatch(user -> user.getId().equals(currentUserId));
+                        }
+                        return CommentDto.CommentResponse.from(reply, currentUserId, replyIsLiked);
+                    })
+                    .collect(Collectors.toList());
+                
+                CommentDto.CommentResponse response = CommentDto.CommentResponse.from(comment, currentUserId, isLiked);
+                response.setReplies(replyResponses);
+                return response;
             })
             .collect(Collectors.toList());
 
