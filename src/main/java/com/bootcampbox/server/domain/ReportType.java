@@ -7,7 +7,8 @@ public enum ReportType {
     LEAK_IMPERSONATION_FRAUD("유출/사칭/사기"),
     ILLEGAL_VIDEO_DISTRIBUTION("불법촬영물 유통"),
     INAPPROPRIATE_FOR_BOARD("게시판 성격에 부적절"),
-    TROLLING_SPAM("낚시/놀람/도배");
+    TROLLING_SPAM("낚시/놀람/도배"),
+    ETC("기타");
 
     private final String description;
 

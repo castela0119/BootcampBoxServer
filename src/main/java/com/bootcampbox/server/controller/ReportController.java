@@ -55,13 +55,14 @@ public class ReportController {
     }
 
     // 댓글 신고 처리 (관리자용)
-    @PutMapping("/comments/{reportId}/process")
+    @PutMapping("/comments/{commentId}/process")
     public ResponseEntity<ReportDto.CommentReportResponse> processCommentReport(
-            @PathVariable Long reportId,
+            @PathVariable Long commentId,
+            @RequestParam Long userId,
             @RequestParam Long adminId,
             @Valid @RequestBody ReportDto.ProcessReportRequest request) {
-        log.info("댓글 신고 처리 요청: reportId={}, adminId={}, status={}", reportId, adminId, request.getStatus());
-        ReportDto.CommentReportResponse response = reportService.processCommentReport(reportId, adminId, request);
+        log.info("댓글 신고 처리 요청: commentId={}, userId={}, adminId={}, status={}", commentId, userId, adminId, request.getStatus());
+        ReportDto.CommentReportResponse response = reportService.processCommentReport(commentId, userId, adminId, request);
         return ResponseEntity.ok(response);
     }
 
@@ -87,12 +88,60 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    // 신고 통계 조회 (관리자용)
+    // === 신고 내용 상세 조회 ===
+    @GetMapping("/posts/{reportId}/detail")
+    public ResponseEntity<ReportDto.PostReportDetailResponse> getPostReportDetail(@PathVariable Long reportId) {
+        try {
+            log.info("게시글 신고 상세 조회 요청: reportId={}", reportId);
+            ReportDto.PostReportDetailResponse response = reportService.getPostReportDetail(reportId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 신고 상세 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/comments/{commentId}/detail")
+    public ResponseEntity<ReportDto.CommentReportDetailResponse> getCommentReportDetail(
+            @PathVariable Long commentId,
+            @RequestParam Long userId) {
+        try {
+            log.info("댓글 신고 상세 조회 요청: commentId={}, userId={}", commentId, userId);
+            ReportDto.CommentReportDetailResponse response = reportService.getCommentReportDetail(commentId, userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("댓글 신고 상세 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // === 사용자별 신고 내역 조회 ===
+    @GetMapping("/user/{userId}/reports")
+    public ResponseEntity<ReportDto.UserReportHistoryResponse> getUserReportHistory(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            log.info("사용자 신고 내역 조회 요청: userId={}, page={}, size={}", userId, page, size);
+            ReportDto.UserReportHistoryResponse response = reportService.getUserReportHistory(userId, page, size);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("사용자 신고 내역 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // === 신고 통계 조회 ===
     @GetMapping("/statistics")
     public ResponseEntity<ReportDto.ReportStatisticsResponse> getReportStatistics() {
-        log.info("신고 통계 조회 요청");
-        ReportDto.ReportStatisticsResponse response = reportService.getReportStatistics();
-        return ResponseEntity.ok(response);
+        try {
+            log.info("신고 통계 조회 요청");
+            ReportDto.ReportStatisticsResponse response = reportService.getReportStatistics();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("신고 통계 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     // 신고 분류 목록 조회

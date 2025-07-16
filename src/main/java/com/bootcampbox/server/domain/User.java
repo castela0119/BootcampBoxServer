@@ -36,6 +36,10 @@ public class User {
 
     private String role = "USER";
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role_type")
+    private RoleType roleType; // 관리자 등급 (관리자일 때만 사용)
+
     @Column(nullable = false)
     private String userType; // 현역, 예비역, 곰신, 민간인, 기타
 

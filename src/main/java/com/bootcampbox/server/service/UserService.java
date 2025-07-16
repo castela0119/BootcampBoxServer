@@ -23,11 +23,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.bootcampbox.server.domain.RoleType; // 추가
+import org.slf4j.Logger; // 추가
+import org.slf4j.LoggerFactory; // 추가
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class); // 추가
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
@@ -290,6 +295,47 @@ public class UserService {
                 (int) totalBookmarks,
                 lastActivityAt
         );
+    }
+
+    // === 관리자 계정 생성 (개발용) ===
+    @Transactional
+    public UserDto.SimpleResponse createAdminUser(UserDto.AdminSignUpRequest request) {
+        // 이메일 중복 확인
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+        }
+
+        // 닉네임 중복 확인
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        // RoleType 검증
+        RoleType roleType;
+        try {
+            roleType = RoleType.valueOf(request.getRoleType());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 관리자 등급입니다. (SUPER_ADMIN, ADMIN, MANAGER, SUPPORT)");
+        }
+
+        // 사용자 생성
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setUsername(request.getEmail()); // 이메일을 username으로 사용
+        user.setNickname(request.getNickname());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setUserType("관리자"); // 관리자 기본값
+        user.setRole("ADMIN"); // 관리자 역할 설정
+        user.setRoleType(roleType); // 관리자 등급 설정
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setZipcode(request.getZipcode());
+        user.setAddress(request.getAddress());
+        user.setAddressDetail(request.getAddressDetail());
+
+        userRepository.save(user);
+        log.info("관리자 계정 생성 완료: {} (등급: {})", request.getEmail(), roleType.getDescription());
+
+        return new UserDto.SimpleResponse("관리자 계정이 생성되었습니다. (등급: " + roleType.getDescription() + ")", true);
     }
 
     // User ID로 User 엔티티 조회 (내부용)

@@ -38,10 +38,17 @@ public class AuthService {
         User user = userRepository.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
+        // 관리자 로그인 시 role 검증 추가
+        if (loginRequest.isAdminLogin() && !"ADMIN".equals(user.getRole())) {
+            throw new RuntimeException("관리자 권한이 없는 계정입니다.");
+        }
+
         return new LoginResponseDto(
                 user.getId(),
                 user.getNickname(),
-                token
+                token,
+                user.getRole(), // 역할 정보
+                user.getRoleType() != null ? user.getRoleType().name() : null // 관리자 등급 정보
         );
     }
 

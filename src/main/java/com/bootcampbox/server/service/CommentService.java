@@ -1,11 +1,14 @@
 package com.bootcampbox.server.service;
 
 import com.bootcampbox.server.domain.Comment;
+import com.bootcampbox.server.domain.CommentReport;
 import com.bootcampbox.server.domain.Post;
+import com.bootcampbox.server.domain.ReportType;
 import com.bootcampbox.server.domain.User;
 import com.bootcampbox.server.dto.CommentDto;
 import com.bootcampbox.server.dto.CommentActionDto;
 import com.bootcampbox.server.repository.CommentRepository;
+import com.bootcampbox.server.repository.CommentReportRepository;
 import com.bootcampbox.server.repository.PostRepository;
 import com.bootcampbox.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +31,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final CommentReportRepository commentReportRepository;
 
     public CommentDto.CommentResponse createComment(Long postId, CommentDto.CreateCommentRequest request, String username) {
         // 게시글 존재 확인
@@ -162,38 +167,12 @@ public class CommentService {
     }
 
     public CommentActionDto.UserListResponse getCommentReports(Long commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
-        List<CommentActionDto.UserInfo> users = comment.getReportedUsers().stream()
-                .map(u -> new CommentActionDto.UserInfo(u.getId(), u.getUsername(), u.getNickname()))
+        // CommentReport에서 신고 유저 목록 조회
+        List<CommentReport> reports = commentReportRepository.findByCommentIdOrderByCreatedAtDesc(commentId);
+        List<CommentActionDto.UserInfo> users = reports.stream()
+                .map(r -> new CommentActionDto.UserInfo(r.getUser().getId(), r.getUser().getUsername(), r.getUser().getNickname()))
                 .collect(Collectors.toList());
         return new CommentActionDto.UserListResponse(users);
-    }
-
-    public CommentActionDto.ActionResponse likeComment(Long commentId, String username) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
-        boolean added = comment.like(user);
-        commentRepository.save(comment);
-
-        String msg = added ? "댓글에 좋아요를 눌렀습니다." : "이미 좋아요를 누른 댓글입니다.";
-        return new CommentActionDto.ActionResponse(msg, comment.getLikeCount(), true);
-    }
-
-    public CommentActionDto.ActionResponse unlikeComment(Long commentId, String username) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
-        boolean removed = comment.unlike(user);
-        commentRepository.save(comment);
-
-        String msg = removed ? "댓글 좋아요를 취소했습니다." : "좋아요를 누르지 않은 댓글입니다.";
-        return new CommentActionDto.ActionResponse(msg, comment.getLikeCount(), true);
     }
 
     public CommentActionDto.ActionResponse reportComment(Long commentId, String username) {
@@ -202,11 +181,18 @@ public class CommentService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        boolean added = comment.report(user);
+        // 이미 신고했는지 확인
+        boolean alreadyReported = commentReportRepository.findByCommentIdAndUserId(commentId, user.getId()).isPresent();
+        if (alreadyReported) {
+            return new CommentActionDto.ActionResponse("이미 신고한 댓글입니다.", comment.getReportCount(), true);
+        }
+        // 신고 생성
+        CommentReport report = CommentReport.createReport(comment, user, ReportType.ETC, null); // 기본값
+        commentReportRepository.save(report);
+        // 신고 수 갱신
+        comment.setReportCount(comment.getReportCount() + 1);
         commentRepository.save(comment);
-
-        String msg = added ? "댓글을 신고했습니다." : "이미 신고한 댓글입니다.";
-        return new CommentActionDto.ActionResponse(msg, comment.getReportCount(), true);
+        return new CommentActionDto.ActionResponse("댓글을 신고했습니다.", comment.getReportCount(), true);
     }
 
     public CommentActionDto.ActionResponse unreportComment(Long commentId, Long userId) {
@@ -215,11 +201,17 @@ public class CommentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        boolean removed = comment.unreport(user);
-        commentRepository.save(comment);
-
-        String msg = removed ? "신고가 취소되었습니다." : "해당 사용자는 이 댓글을 신고하지 않았습니다.";
-        return new CommentActionDto.ActionResponse(msg, comment.getReportCount(), true);
+        Optional<CommentReport> reportOpt = commentReportRepository.findByCommentIdAndUserId(commentId, userId);
+        if (reportOpt.isPresent()) {
+            CommentReport report = reportOpt.get();
+            commentReportRepository.delete(report);
+            // 신고 수 갱신
+            comment.setReportCount(Math.max(0, comment.getReportCount() - 1));
+            commentRepository.save(comment);
+            return new CommentActionDto.ActionResponse("신고가 취소되었습니다.", comment.getReportCount(), true);
+        } else {
+            return new CommentActionDto.ActionResponse("해당 사용자는 이 댓글을 신고하지 않았습니다.", comment.getReportCount(), true);
+        }
     }
 
     public CommentActionDto.ActionResponse toggleCommentLike(Long commentId, String username) {

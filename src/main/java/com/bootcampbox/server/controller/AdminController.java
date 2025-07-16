@@ -83,6 +83,29 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
+    // === 신고 관리 ===
+    @GetMapping("/post-reports")
+    public ResponseEntity<AdminDto.PostReportListResponse> getPostReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type) {
+        
+        AdminDto.PostReportListResponse response = adminService.getPostReports(page, size, status, type);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/comment-reports")
+    public ResponseEntity<AdminDto.CommentReportListResponse> getCommentReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type) {
+        
+        AdminDto.CommentReportListResponse response = adminService.getCommentReports(page, size, status, type);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<AdminDto.SimpleResponse> deleteComment(@PathVariable Long commentId) {
         AdminDto.SimpleResponse response = adminService.deleteComment(commentId);

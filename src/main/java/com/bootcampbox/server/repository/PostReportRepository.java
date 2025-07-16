@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,4 +70,13 @@ public interface PostReportRepository extends JpaRepository<PostReport, Long> {
     
     // 신고 분류별 개수 조회
     long countByReportType(ReportType reportType);
+    
+    // 사용자별 신고 내역 조회
+    Page<PostReport> findByUserId(Long userId, Pageable pageable);
+    
+    // 기간별 신고 수 조회
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    
+    // 상태 목록별 신고 수 조회
+    long countByStatusIn(List<ReportStatus> statuses);
 } 

@@ -25,6 +25,8 @@ public class AdminService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final ProductRepository productRepository;
+    private final PostReportRepository postReportRepository;
+    private final CommentReportRepository commentReportRepository;
 
     // === 사용자 관리 ===
     public AdminDto.UserListResponse getAllUsers(int page, int size, String search) {
@@ -236,6 +238,71 @@ public class AdminService {
         return new AdminDto.DashboardStats(
             totalUsers, totalPosts, totalComments, totalProducts,
             todayNewUsers, todayNewPosts, todayNewComments, reportedComments
+        );
+    }
+
+    // === 신고 관리 ===
+    public AdminDto.PostReportListResponse getPostReports(int page, int size, String status, String type) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        Page<PostReport> reportPage;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                ReportStatus reportStatus = ReportStatus.valueOf(status.toUpperCase());
+                reportPage = postReportRepository.findByStatusOrderByCreatedAtDesc(reportStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                reportPage = postReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else if (type != null && !type.trim().isEmpty()) {
+            try {
+                ReportType reportType = ReportType.valueOf(type.toUpperCase());
+                reportPage = postReportRepository.findByReportTypeOrderByCreatedAtDesc(reportType, pageable);
+            } catch (IllegalArgumentException e) {
+                reportPage = postReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else {
+            reportPage = postReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+
+        return AdminDto.PostReportListResponse.from(
+            reportPage.getContent(),
+            reportPage.getTotalElements(),
+            page,
+            reportPage.getTotalPages(),
+            reportPage.hasNext(),
+            reportPage.hasPrevious()
+        );
+    }
+
+    public AdminDto.CommentReportListResponse getCommentReports(int page, int size, String status, String type) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        Page<CommentReport> reportPage;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                ReportStatus reportStatus = ReportStatus.valueOf(status.toUpperCase());
+                reportPage = commentReportRepository.findByStatusOrderByCreatedAtDesc(reportStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                reportPage = commentReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else if (type != null && !type.trim().isEmpty()) {
+            try {
+                ReportType reportType = ReportType.valueOf(type.toUpperCase());
+                reportPage = commentReportRepository.findByReportTypeOrderByCreatedAtDesc(reportType, pageable);
+            } catch (IllegalArgumentException e) {
+                reportPage = commentReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else {
+            reportPage = commentReportRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+
+        return AdminDto.CommentReportListResponse.from(
+            reportPage.getContent(),
+            reportPage.getTotalElements(),
+            page,
+            reportPage.getTotalPages(),
+            reportPage.hasNext(),
+            reportPage.hasPrevious()
         );
     }
 } 

@@ -232,4 +232,115 @@ public class AdminDto {
             this.success = success;
         }
     }
+
+    // === 신고 관리 ===
+    @Getter
+    @Setter
+    public static class PostReportListResponse {
+        private List<PostReportInfo> reports;
+        private long totalReports;
+        private int currentPage;
+        private int totalPages;
+        private boolean hasNext;
+        private boolean hasPrevious;
+
+        public static PostReportListResponse from(List<com.bootcampbox.server.domain.PostReport> reports, long totalReports, 
+                                                int currentPage, int totalPages, 
+                                                boolean hasNext, boolean hasPrevious) {
+            PostReportListResponse dto = new PostReportListResponse();
+            dto.setReports(reports.stream().map(PostReportInfo::from).collect(Collectors.toList()));
+            dto.setTotalReports(totalReports);
+            dto.setCurrentPage(currentPage);
+            dto.setTotalPages(totalPages);
+            dto.setHasNext(hasNext);
+            dto.setHasPrevious(hasPrevious);
+            return dto;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class PostReportInfo {
+        private Long id;
+        private Long postId;
+        private String postTitle;
+        private Long reporterId;
+        private String reporterNickname;
+        private String reportType;
+        private String reportStatus;
+        private String reason;
+        private LocalDateTime createdAt;
+        private LocalDateTime processedAt;
+
+        public static PostReportInfo from(com.bootcampbox.server.domain.PostReport report) {
+            PostReportInfo dto = new PostReportInfo();
+            dto.setId(report.getId());
+            dto.setPostId(report.getPost().getId());
+            dto.setPostTitle(report.getPost().getTitle());
+            dto.setReporterId(report.getUser().getId());
+            dto.setReporterNickname(report.getUser().getNickname());
+            dto.setReportType(report.getReportType().name());
+            dto.setReportStatus(report.getStatus().name());
+            dto.setReason(report.getAdditionalReason());
+            dto.setCreatedAt(report.getCreatedAt());
+            dto.setProcessedAt(report.getProcessedAt());
+            return dto;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class CommentReportListResponse {
+        private List<CommentReportInfo> reports;
+        private long totalReports;
+        private int currentPage;
+        private int totalPages;
+        private boolean hasNext;
+        private boolean hasPrevious;
+
+        public static CommentReportListResponse from(List<com.bootcampbox.server.domain.CommentReport> reports, long totalReports, 
+                                                   int currentPage, int totalPages, 
+                                                   boolean hasNext, boolean hasPrevious) {
+            CommentReportListResponse dto = new CommentReportListResponse();
+            dto.setReports(reports.stream().map(CommentReportInfo::from).collect(Collectors.toList()));
+            dto.setTotalReports(totalReports);
+            dto.setCurrentPage(currentPage);
+            dto.setTotalPages(totalPages);
+            dto.setHasNext(hasNext);
+            dto.setHasPrevious(hasPrevious);
+            return dto;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class CommentReportInfo {
+        private Long id;
+        private Long commentId;
+        private String commentContent;
+        private String postTitle;
+        private Long reporterId;
+        private String reporterNickname;
+        private String reportType;
+        private String reportStatus;
+        private String reason;
+        private LocalDateTime createdAt;
+        private LocalDateTime processedAt;
+
+        public static CommentReportInfo from(com.bootcampbox.server.domain.CommentReport report) {
+            CommentReportInfo dto = new CommentReportInfo();
+            dto.setId(report.getCommentId()); // 복합 기본키의 commentId 부분 사용
+            dto.setCommentId(report.getComment().getId());
+            dto.setCommentContent(report.getComment().getContent());
+            dto.setPostTitle(report.getComment().getPost().getTitle());
+            dto.setReporterId(report.getUser().getId());
+            dto.setReporterNickname(report.getUser().getNickname());
+            dto.setReportType(report.getReportType().name());
+            dto.setReportStatus(report.getStatus().name());
+            dto.setReason(report.getAdditionalReason());
+            dto.setCreatedAt(report.getCreatedAt());
+            dto.setProcessedAt(report.getProcessedAt());
+            return dto;
+        }
+    }
 } 

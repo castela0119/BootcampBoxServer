@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {
@@ -39,6 +39,19 @@ public class UserController {
         successResponse.put("timestamp", LocalDateTime.now().toString());
         
         return ResponseEntity.ok(successResponse);
+    }
+
+    // === 관리자 계정 생성 (개발용) ===
+    @PostMapping("/admin/create")
+    public ResponseEntity<UserDto.SimpleResponse> createAdminUser(@Valid @RequestBody UserDto.AdminSignUpRequest request) {
+        try {
+            log.info("관리자 계정 생성 요청: {} (등급: {})", request.getEmail(), request.getRoleType());
+            UserDto.SimpleResponse response = userService.createAdminUser(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("관리자 계정 생성 오류: ", e);
+            return ResponseEntity.badRequest().body(new UserDto.SimpleResponse("관리자 계정 생성 실패: " + e.getMessage(), false));
+        }
     }
 
     private void saveErrorLogToFile(Exception e, UserDto.SignUpRequest request) {

@@ -1,6 +1,7 @@
 package com.bootcampbox.server.repository;
 
 import com.bootcampbox.server.domain.CommentReport;
+import com.bootcampbox.server.domain.CommentReportId;
 import com.bootcampbox.server.domain.ReportStatus;
 import com.bootcampbox.server.domain.ReportType;
 import org.springframework.data.domain.Page;
@@ -10,14 +11,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CommentReportRepository extends JpaRepository<CommentReport, Long> {
+public interface CommentReportRepository extends JpaRepository<CommentReport, CommentReportId> {
     
     // 특정 댓글의 신고 목록 조회
     List<CommentReport> findByCommentIdOrderByCreatedAtDesc(Long commentId);
+    
+    // 특정 댓글의 신고 수 조회
+    long countByCommentId(Long commentId);
+    
+    // 사용자가 특정 댓글을 신고했는지 확인
+    Optional<CommentReport> findByCommentIdAndUserId(Long commentId, Long userId);
     
     // 특정 사용자가 신고한 댓글 목록 조회
     List<CommentReport> findByUserIdOrderByCreatedAtDesc(Long userId);
@@ -27,12 +35,6 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
     
     // 신고 분류별 조회
     List<CommentReport> findByReportTypeOrderByCreatedAtDesc(ReportType reportType);
-    
-    // 특정 댓글의 특정 사용자 신고 확인
-    Optional<CommentReport> findByCommentIdAndUserId(Long commentId, Long userId);
-    
-    // 특정 댓글의 신고 개수 조회
-    long countByCommentId(Long commentId);
     
     // 특정 댓글의 특정 상태 신고 개수 조회
     long countByCommentIdAndStatus(Long commentId, ReportStatus status);
@@ -61,4 +63,13 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
     
     // 신고 분류별 개수 조회
     long countByReportType(ReportType reportType);
+    
+    // 사용자별 신고 내역 조회
+    Page<CommentReport> findByUserId(Long userId, Pageable pageable);
+    
+    // 기간별 신고 수 조회
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    
+    // 상태 목록별 신고 수 조회
+    long countByStatusIn(List<ReportStatus> statuses);
 } 

@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.AllArgsConstructor;
 
 public class UserDto {
 
@@ -111,5 +113,41 @@ public class UserDto {
                     .userType(user.getUserType())
                     .build();
         }
+    }
+
+    // === 공통 응답 ===
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    public static class SimpleResponse {
+        private String message;
+        private boolean success;
+    }
+
+    // === 관리자 회원가입 요청 ===
+    @Getter
+    @NoArgsConstructor
+    public static class AdminSignUpRequest {
+        @NotBlank(message = "이메일은 필수 입력값입니다.")
+        @Pattern(regexp = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "이메일 형식이 올바르지 않습니다.")
+        private String email;
+
+        @NotBlank(message = "닉네임은 필수 입력값입니다.")
+        private String nickname;
+
+        @NotBlank(message = "비밀번호는 필수 입력값입니다.")
+        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$",
+                message = "비밀번호는 8자 이상, 영문자, 숫자, 특수문자를 포함해야 합니다.")
+        private String password;
+
+        @NotBlank(message = "관리자 등급은 필수 입력값입니다.")
+        private String roleType; // SUPER_ADMIN, ADMIN, MANAGER, SUPPORT
+
+        @Pattern(regexp = "^$|^\\d{3}-\\d{3,4}-\\d{4}$", message = "휴대폰 번호 형식이 올바르지 않습니다.")
+        private String phoneNumber;
+
+        private String zipcode;
+        private String address;
+        private String addressDetail;
     }
 } 

@@ -29,6 +29,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         String role = user.getRole() != null ? user.getRole() : "USER";
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+        
+        // 관리자인 경우 등급 정보도 추가
+        if ("ADMIN".equals(role) && user.getRoleType() != null) {
+            authorities = List.of(
+                new SimpleGrantedAuthority("ROLE_" + role),
+                new SimpleGrantedAuthority("ROLE_TYPE_" + user.getRoleType().name())
+            );
+        }
+        
         String userEmail = user.getEmail();
         String password = user.getPassword();
 

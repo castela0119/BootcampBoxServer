@@ -8,20 +8,24 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "comment_reports", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"comment_id", "user_id"})
-})
+@Table(name = "comment_reports")
 @Getter
 @Setter
 @NoArgsConstructor
+@IdClass(CommentReportId.class)
 public class CommentReport {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id
+    @Column(name = "comment_id")
+    private Long commentId;
 
-    @ManyToOne @JoinColumn(name = "comment_id", nullable = false)
+    @Id
+    @Column(name = "user_id")
+    private Long userId;
+
+    @ManyToOne @JoinColumn(name = "comment_id", nullable = false, insertable = false, updatable = false)
     private Comment comment;
 
-    @ManyToOne @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false)
     private User user;
 
     @Enumerated(EnumType.STRING)
@@ -47,9 +51,21 @@ public class CommentReport {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    // 복합 기본키를 위한 메서드들
+    public CommentReportId getId() {
+        return new CommentReportId(commentId, userId);
+    }
+
+    public void setId(CommentReportId id) {
+        this.commentId = id.getCommentId();
+        this.userId = id.getUserId();
+    }
+
     // 신고 생성 메서드
     public static CommentReport createReport(Comment comment, User user, ReportType reportType, String additionalReason) {
         CommentReport report = new CommentReport();
+        report.setCommentId(comment.getId());
+        report.setUserId(user.getId());
         report.setComment(comment);
         report.setUser(user);
         report.setReportType(reportType);

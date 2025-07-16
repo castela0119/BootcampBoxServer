@@ -1,681 +1,8 @@
-# 🚀 Rookie PX Server API 엔드포인트 (Flutter 호출용)
+# Flutter API 연동 명세서 - 좋아요 기능
 
-## 📱 기본 정보
-- **Base URL**: http://localhost:8080 (개발) / https://your-domain.com (운영)
-- **Content-Type**: application/json
-- **Authorization**: Bearer {JWT_TOKEN} (로그인 필요 API)
+## 🎯 좋아요 토글 API (권장)
 
----
-
-## 🔐 인증/회원가입 API
-
-### 1. 회원가입
-```
-POST /api/auth/signup
-Content-Type: application/json
-
-Request Body:
-{
-  "email": "user@example.com",
-  "phoneNumber": "010-1234-5678",
-  "password": "password123",
-  "nickname": "사용자닉네임",
-  "userType": "ACTIVE_DUTY", // ACTIVE_DUTY, VETERAN, CIVILIAN
-  "branch": "육군", // 육군, 해군, 공군, 해병대
-  "unit": "1사단",
-  "militaryRank": "병장",
-  "enlistDate": "2023-01-01",
-  "dischargeDate": "2024-12-31",
-  "address": "서울시 강남구",
-  "addressDetail": "123-45",
-  "zipcode": "12345"
-}
-
-Response:
-{
-  "message": "회원가입이 완료되었습니다.",
-  "success": true,
-  "userId": 1
-}
-```
-
-### 2. 로그인
-```
-POST /api/auth/login
-Content-Type: application/json
-
-Request Body:
-{
-  "phoneNumber": "010-1234-5678",
-  "password": "password123"
-}
-
-Response:
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "userId": 1,
-  "nickname": "사용자닉네임",
-  "role": "USER"
-}
-```
-
-### 3. 로그아웃
-```
-POST /api/auth/logout
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-"로그아웃되었습니다."
-```
-
-### 4. 중복확인
-```
-POST /api/auth/check-duplicate
-Content-Type: application/json
-
-Request Body:
-{
-  "type": "EMAIL", // EMAIL, NICKNAME
-  "value": "이메일 또는 닉네임값"
-}
-
-Response:
-{
-  "message": "사용 가능한 이메일입니다.",
-  "available": true,
-  "duplicate": false
-}
-```
-
-### 4-1. 이메일 중복확인 (개별)
-```
-GET /api/auth/check-email/{email}
-
-Response:
-{
-  "message": "사용 가능한 이메일입니다.",
-  "available": true,
-  "duplicate": false
-}
-```
-
-### 4-2. 닉네임 중복확인 (개별)
-```
-GET /api/auth/check-nickname/{nickname}
-
-Response:
-{
-  "message": "사용 가능한 닉네임입니다.",
-  "available": true,
-  "duplicate": false
-}
-```
-
-### 5. 비밀번호 재설정
-```
-POST /api/auth/reset-password
-Content-Type: application/json
-
-Request Body:
-{
-  "phoneNumber": "010-1234-5678",
-  "newPassword": "새비밀번호123"
-}
-
-Response:
-{
-  "message": "비밀번호가 성공적으로 재설정되었습니다.",
-  "success": true
-}
-```
-
----
-
-## 👤 마이페이지 API
-
-### 6. 내 정보 조회
-```
-GET /api/user/me
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "userId": 1,
-  "phoneNumber": "010-1234-5678",
-  "nickname": "사용자닉네임",
-  "username": "사용자아이디",
-  "userType": "ACTIVE_DUTY",
-  "branch": "육군",
-  "unit": "1사단",
-  "militaryRank": "병장",
-  "enlistDate": "2023-01-01",
-  "dischargeDate": "2024-12-31",
-  "address": "서울시 강남구",
-  "addressDetail": "123-45",
-  "zipcode": "12345",
-  "createdAt": "2024-01-01T00:00:00"
-}
-```
-
-### 7. 내 정보 수정
-```
-PATCH /api/user/me
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "nickname": "새닉네임",
-  "unit": "2사단",
-  "militaryRank": "상병",
-  "address": "서울시 서초구",
-  "addressDetail": "456-78",
-  "zipcode": "54321"
-}
-
-Response:
-{
-  "message": "정보가 성공적으로 수정되었습니다.",
-  "success": true,
-  "userInfo": { ... }
-}
-```
-
-### 8. 내가 쓴 글 목록
-```
-GET /api/user/me/posts?page=0&size=10
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "content": [
-    {
-      "postId": 1,
-      "title": "게시글 제목",
-      "content": "게시글 내용",
-      "category": "자유게시판",
-      "viewCount": 10,
-      "commentCount": 5,
-      "likeCount": 3,
-      "createdAt": "2024-01-01T00:00:00"
-    }
-  ],
-  "totalElements": 1,
-  "totalPages": 1,
-  "size": 10,
-  "number": 0
-}
-```
-
-### 9. 내가 좋아요한 글 목록
-```
-GET /api/user/me/likes
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "postIds": [1, 2, 3],
-  "count": 3
-}
-```
-
-### 10. 내가 북마크한 글 목록
-```
-GET /api/user/me/bookmarks
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "postIds": [1, 2, 3],
-  "count": 3
-}
-```
-
-### 11. 내 활동 요약
-```
-GET /api/user/me/activity-summary
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "totalPosts": 5,
-  "totalLikes": 10,
-  "totalBookmarks": 3,
-  "recentActivity": [
-    {
-      "type": "POST",
-      "title": "게시글 제목",
-      "createdAt": "2024-01-01T00:00:00"
-    }
-  ]
-}
-```
-
----
-
-## 🔔 알림 API
-
-### 12. 알림 목록 조회
-```
-GET /notifications
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "notifications": [
-    {
-      "id": 1,
-      "type": "LIKE",
-      "message": "게시글에 좋아요가 달렸습니다.",
-      "isRead": false,
-      "createdAt": "2024-01-01T00:00:00"
-    }
-  ],
-  "unreadCount": 1
-}
-```
-
-### 13. 알림 읽음 처리
-```
-PATCH /notifications/read
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "모든 알림이 읽음 처리되었습니다.",
-  "success": true
-}
-```
-
----
-
-## 🛍️ PX 상품 API
-
-### 14. 상품 목록 조회
-```
-GET /api/products?page=0&size=12
-
-Response:
-{
-  "products": [
-    {
-      "id": 1,
-      "name": "상품명",
-      "description": "상품 설명",
-      "price": 10000,
-      "category": "식품",
-      "imageUrl": "https://example.com/image.jpg",
-      "externalLink": "https://example.com/product"
-    }
-  ],
-  "totalElements": 1,
-  "totalPages": 1,
-  "size": 12,
-  "number": 0
-}
-```
-
-### 15. 카테고리별 상품 목록
-```
-GET /api/products/category/식품?page=0&size=12
-
-Response: (위와 동일한 형식)
-```
-
-### 16. 상품 검색
-```
-GET /api/products/search?keyword=상품명&page=0&size=12
-
-Response: (위와 동일한 형식)
-```
-
-### 17. 카테고리별 상품 검색
-```
-GET /api/products/category/식품/search?keyword=상품명&page=0&size=12
-
-Response: (위와 동일한 형식)
-```
-
-### 18. 모든 카테고리 조회
-```
-GET /api/products/categories
-
-Response:
-{
-  "categories": ["식품", "의류", "전자제품", "생활용품"]
-}
-```
-
----
-
-## 💬 커뮤니티 API
-
-### 19. 게시글 목록 조회
-```
-GET /api/posts?page=0&size=10
-
-Response:
-{
-  "content": [
-    {
-      "postId": 1,
-      "title": "게시글 제목",
-      "content": "게시글 내용",
-      "author": "작성자닉네임",
-      "category": "자유게시판",
-      "viewCount": 10,
-      "commentCount": 5,
-      "likeCount": 3,
-      "createdAt": "2024-01-01T00:00:00"
-    }
-  ],
-  "totalElements": 1,
-  "totalPages": 1,
-  "size": 10,
-  "number": 0
-}
-```
-
-### 20. 게시글 상세 조회
-```
-GET /api/posts/{postId}
-
-Response:
-{
-  "postId": 1,
-  "title": "게시글 제목",
-  "content": "게시글 내용",
-  "author": "작성자닉네임",
-  "category": "자유게시판",
-  "viewCount": 10,
-  "commentCount": 5,
-  "likeCount": 3,
-  "isLiked": false,
-  "isBookmarked": false,
-  "createdAt": "2024-01-01T00:00:00"
-}
-```
-
-### 21. 게시글 작성
-```
-POST /api/posts?userId={userId}
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "title": "게시글 제목",
-  "content": "게시글 내용",
-  "category": "자유게시판"
-}
-
-Response:
-{
-  "postId": 1,
-  "title": "게시글 제목",
-  "content": "게시글 내용",
-  "author": "작성자닉네임",
-  "category": "자유게시판",
-  "createdAt": "2024-01-01T00:00:00"
-}
-```
-
-### 22. 게시글 수정
-```
-PUT /api/posts/{postId}?userId={userId}
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "title": "수정된 제목",
-  "content": "수정된 내용",
-  "category": "자유게시판"
-}
-
-Response: (게시글 상세와 동일)
-```
-
-### 23. 게시글 삭제
-```
-DELETE /api/posts/{postId}?userId={userId}
-Authorization: Bearer {JWT_TOKEN}
-
-Response: 200 OK
-```
-
-### 24. 게시글 좋아요
-```
-POST /api/posts/{postId}/like
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "좋아요가 추가되었습니다.",
-  "likeCount": 4,
-  "isLiked": true,
-  "isBookmarked": false,
-  "success": true
-}
-```
-
-### 25. 게시글 좋아요 취소
-```
-DELETE /api/posts/{postId}/like
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "좋아요가 취소되었습니다.",
-  "likeCount": 3,
-  "isLiked": false,
-  "isBookmarked": false,
-  "success": true
-}
-```
-
-### 26. 게시글 북마크
-```
-POST /api/posts/{postId}/bookmark
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "북마크가 추가되었습니다.",
-  "likeCount": 3,
-  "isLiked": false,
-  "isBookmarked": true,
-  "success": true
-}
-```
-
-### 27. 게시글 북마크 취소
-```
-DELETE /api/posts/{postId}/bookmark
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "북마크가 취소되었습니다.",
-  "likeCount": 3,
-  "isLiked": false,
-  "isBookmarked": false,
-  "success": true
-}
-```
-
-### 28. 게시글 신고
-```
-POST /api/posts/{postId}/report
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "reason": "부적절한 내용"
-}
-
-Response:
-{
-  "message": "신고가 접수되었습니다.",
-  "success": true
-}
-```
-
-### 29. 사용자별 게시글 목록
-```
-GET /api/posts/user/{userId}?page=0&size=10
-
-Response: (게시글 목록과 동일한 형식)
-```
-
----
-
-## 💭 댓글 API
-
-### 30. 댓글 목록 조회
-```
-GET /api/posts/{postId}/comments
-
-Response:
-{
-  "comments": [
-    {
-      "commentId": 1,
-      "content": "댓글 내용",
-      "author": "작성자닉네임",
-      "likeCount": 2,
-      "isLiked": false,
-      "createdAt": "2024-01-01T00:00:00",
-      "replies": [
-        {
-          "commentId": 2,
-          "content": "대댓글 내용",
-          "author": "작성자닉네임",
-          "likeCount": 1,
-          "isLiked": false,
-          "createdAt": "2024-01-01T00:00:00"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### 31. 댓글 작성
-```
-POST /api/posts/{postId}/comments
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "content": "댓글 내용",
-  "parentId": null // 대댓글인 경우 부모 댓글 ID
-}
-
-Response:
-{
-  "commentId": 1,
-  "content": "댓글 내용",
-  "author": "작성자닉네임",
-  "likeCount": 0,
-  "isLiked": false,
-  "createdAt": "2024-01-01T00:00:00"
-}
-```
-
-### 32. 댓글 수정
-```
-PATCH /api/posts/comments/{commentId}
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "content": "수정된 댓글 내용"
-}
-
-Response: (댓글 작성 응답과 동일)
-```
-
-### 33. 댓글 삭제
-```
-DELETE /api/posts/comments/{commentId}
-Authorization: Bearer {JWT_TOKEN}
-
-Response: 200 OK
-```
-
-### 34. 댓글 좋아요
-```
-POST /api/posts/comments/{commentId}/like
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "댓글 좋아요가 추가되었습니다.",
-  "likeCount": 3,
-  "isLiked": true,
-  "success": true
-}
-```
-
-### 35. 댓글 좋아요 취소
-```
-DELETE /api/posts/comments/{commentId}/like
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "message": "댓글 좋아요가 취소되었습니다.",
-  "likeCount": 2,
-  "isLiked": false,
-  "success": true
-}
-```
-
-### 36. 댓글 신고
-```
-POST /api/posts/comments/{commentId}/report
-Authorization: Bearer {JWT_TOKEN}
-Content-Type: application/json
-
-Request Body:
-{
-  "reason": "부적절한 댓글"
-}
-
-Response:
-{
-  "message": "댓글 신고가 접수되었습니다.",
-  "success": true
-}
-```
-
-### 37. 내 댓글 목록
-```
-GET /api/posts/user/me/comments
-Authorization: Bearer {JWT_TOKEN}
-
-Response:
-{
-  "comments": [
-    {
-      "commentId": 1,
-      "content": "댓글 내용",
-      "postTitle": "게시글 제목",
-      "createdAt": "2024-01-01T00:00:00"
-    }
-  ]
-}
-```
-
----
-
-## 🔧 Flutter 호출 예시
-
-### HTTP 클라이언트 설정
+### 게시글 좋아요 토글
 ```dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -694,91 +21,184 @@ class ApiService {
     return headers;
   }
 
-  // 로그인 예시
-  static Future<Map<String, dynamic>> login(String phoneNumber, String password) async {
+  // 게시글 좋아요 토글 (추가/취소)
+  static Future<Map<String, dynamic>> togglePostLike(int postId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/auth/login'),
-      headers: headers,
-      body: jsonEncode({
-        'phoneNumber': phoneNumber,
-        'password': password,
-      }),
+      Uri.parse('$baseUrl/api/posts/$postId/toggle-like'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
     );
-
+    
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      token = data['token']; // 토큰 저장
-      return data;
+      return json.decode(response.body);
     } else {
-      throw Exception('로그인 실패');
-    }
-  }
-
-  // 게시글 목록 조회 예시
-  static Future<List<dynamic>> getPosts({int page = 0, int size = 10}) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/posts?page=$page&size=$size'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['content'];
-    } else {
-      throw Exception('게시글 목록 조회 실패');
+      throw Exception('좋아요 토글 실패');
     }
   }
 }
 ```
 
-### 사용 예시
-```dart
-// 로그인
-try {
-  final loginData = await ApiService.login('010-1234-5678', 'password123');
-  print('로그인 성공: ${loginData['nickname']}');
-} catch (e) {
-  print('로그인 실패: $e');
-}
-
-// 게시글 목록 조회
-try {
-  final posts = await ApiService.getPosts(page: 0, size: 10);
-  print('게시글 ${posts.length}개 조회됨');
-} catch (e) {
-  print('게시글 조회 실패: $e');
-}
-```
-
----
-
-## 📝 주의사항
-
-1. **JWT 토큰**: 로그인 후 받은 토큰을 Authorization 헤더에 포함해야 합니다.
-2. **에러 처리**: 모든 API 호출 시 적절한 에러 처리를 구현하세요.
-3. **페이징**: 목록 조회 API는 page, size 파라미터를 지원합니다.
-4. **환경 설정**: 개발/운영 환경에 따라 baseUrl을 변경하세요.
-5. **Content-Type**: POST/PUT 요청 시 application/json을 설정하세요.
-
----
-
-## 🚨 에러 응답 형식
-
+**응답 예시:**
 ```json
 {
-  "error": "에러 메시지",
-  "status": 400,
-  "timestamp": "2024-01-01T00:00:00"
+  "message": "좋아요가 추가되었습니다.",
+  "count": 5,
+  "liked": true,
+  "reported": false,
+  "bookmarked": false
 }
 ```
 
----
+### 댓글 좋아요 토글
+```dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-## 📱 Flutter 패키지 의존성
+class ApiService {
+  static const String baseUrl = 'http://localhost:8080';
+  static String? token;
 
-```yaml
-dependencies:
-  http: ^1.1.0
-  shared_preferences: ^2.2.2  # 토큰 저장용
-  flutter_secure_storage: ^9.0.0  # 보안 토큰 저장용
-``` 
+  static Map<String, String> get headers {
+    Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  // 댓글 좋아요 토글 (추가/취소)
+  static Future<Map<String, dynamic>> toggleCommentLike(int commentId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/comments/$commentId/toggle-like'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('댓글 좋아요 토글 실패');
+    }
+  }
+}
+```
+
+**응답 예시:**
+```json
+{
+  "message": "좋아요가 취소되었습니다.",
+  "count": 3,
+  "liked": false
+}
+```
+
+## ⚠️ 중요 사항
+
+### 1. 엔드포인트 변경
+- **기존**: `/api/posts/{id}/like` (POST/DELETE)
+- **변경**: `/api/posts/{id}/toggle-like` (POST)
+
+### 2. 토글 방식
+- 한 번 호출하면 좋아요 추가
+- 다시 호출하면 좋아요 취소
+- 응답의 `liked` 필드로 현재 상태 확인
+
+### 3. 응답 필드
+- `count`: 현재 좋아요 수
+- `liked`: 현재 사용자의 좋아요 상태 (true/false)
+- `message`: 작업 결과 메시지
+
+## 🔧 사용 예시
+
+```dart
+class PostDetailPage extends StatefulWidget {
+  @override
+  _PostDetailPageState createState() => _PostDetailPageState();
+}
+
+class _PostDetailPageState extends State<PostDetailPage> {
+  bool isLiked = false;
+  int likeCount = 0;
+  
+  // 좋아요 토글
+  Future<void> _toggleLike() async {
+    try {
+      final result = await togglePostLike(widget.postId);
+      setState(() {
+        isLiked = result['liked'];
+        likeCount = result['count'];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'])),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('좋아요 처리 중 오류가 발생했습니다.')),
+      );
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('게시글 상세')),
+      body: Column(
+        children: [
+          // 게시글 내용...
+          
+          // 좋아요 버튼
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: isLiked ? Colors.red : Colors.grey,
+                ),
+                onPressed: _toggleLike,
+              ),
+              Text('$likeCount'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## 📝 API 테스트
+
+### curl 명령어로 테스트
+```bash
+# 게시글 좋아요 토글
+curl -X POST http://localhost:8080/api/posts/24/toggle-like \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# 댓글 좋아요 토글
+curl -X POST http://localhost:8080/api/comments/15/toggle-like \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 🚨 주의사항
+
+1. **JWT 토큰 필수**: 모든 좋아요 API는 인증이 필요합니다.
+2. **토글 방식**: 좋아요 추가/취소를 하나의 엔드포인트로 처리합니다.
+3. **상태 동기화**: 응답의 `liked` 필드로 UI 상태를 업데이트하세요.
+4. **에러 처리**: 네트워크 오류나 인증 실패 시 적절한 에러 처리가 필요합니다.
+
+## 📋 구현 체크리스트
+
+- [ ] Flutter에서 `/toggle-like` 엔드포인트 사용
+- [ ] 좋아요 버튼 UI 구현 (아이콘 변경)
+- [ ] 좋아요 수 표시
+- [ ] 토글 상태에 따른 UI 업데이트
+- [ ] 에러 처리 및 사용자 피드백
+- [ ] JWT 토큰 인증 처리 

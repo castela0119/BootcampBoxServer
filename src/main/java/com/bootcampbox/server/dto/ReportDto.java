@@ -8,9 +8,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ReportDto {
@@ -63,19 +65,20 @@ public class ReportDto {
         }
     }
 
-    // 게시글 신고 응답
+    // === 신고 목록 조회 응답 ===
     @Getter
+    @Setter
     @Builder
     public static class PostReportResponse {
         private Long id;
         private Long postId;
         private String postTitle;
-        private UserDto.SimpleUserResponse reporter; // 신고자
+        private UserDto.SimpleUserResponse reporter;
         private ReportType reportType;
         private String additionalReason;
         private ReportStatus status;
         private String adminComment;
-        private UserDto.SimpleUserResponse processedBy; // 처리한 관리자
+        private UserDto.SimpleUserResponse processedBy;
         private LocalDateTime processedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -98,8 +101,8 @@ public class ReportDto {
         }
     }
 
-    // 댓글 신고 응답
     @Getter
+    @Setter
     @Builder
     public static class CommentReportResponse {
         private Long id;
@@ -107,19 +110,19 @@ public class ReportDto {
         private String commentContent;
         private Long postId;
         private String postTitle;
-        private UserDto.SimpleUserResponse reporter; // 신고자
+        private UserDto.SimpleUserResponse reporter;
         private ReportType reportType;
         private String additionalReason;
         private ReportStatus status;
         private String adminComment;
-        private UserDto.SimpleUserResponse processedBy; // 처리한 관리자
+        private UserDto.SimpleUserResponse processedBy;
         private LocalDateTime processedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
         public static CommentReportResponse from(CommentReport report) {
             return CommentReportResponse.builder()
-                    .id(report.getId())
+                    .id(report.getCommentId()) // 복합 기본키의 commentId 부분 사용
                     .commentId(report.getComment().getId())
                     .commentContent(report.getComment().getContent())
                     .postId(report.getComment().getPost().getId())
@@ -137,23 +140,164 @@ public class ReportDto {
         }
     }
 
-    // 신고 통계 응답
+    // === 신고 상세 조회 응답 ===
     @Getter
+    @Setter
+    @Builder
+    public static class PostReportDetailResponse {
+        private Long id;
+        private Long postId;
+        private String postTitle;
+        private String postContent;
+        private Long postAuthorId;
+        private String postAuthorNickname;
+        private Long reporterId;
+        private String reporterNickname;
+        private ReportType reportType;
+        private String reportTypeDescription;
+        private String additionalReason;
+        private ReportStatus status;
+        private String statusDescription;
+        private String adminComment;
+        private Long processedById;
+        private String processedByNickname;
+        private LocalDateTime createdAt;
+        private LocalDateTime processedAt;
+        private LocalDateTime updatedAt;
+
+        public static PostReportDetailResponse from(PostReport report) {
+            return PostReportDetailResponse.builder()
+                    .id(report.getId())
+                    .postId(report.getPost().getId())
+                    .postTitle(report.getPost().getTitle())
+                    .postContent(report.getPost().getContent())
+                    .postAuthorId(report.getPost().getUser().getId())
+                    .postAuthorNickname(report.getPost().getUser().getNickname())
+                    .reporterId(report.getUser().getId())
+                    .reporterNickname(report.getUser().getNickname())
+                    .reportType(report.getReportType())
+                    .reportTypeDescription(report.getReportType().getDescription())
+                    .additionalReason(report.getAdditionalReason())
+                    .status(report.getStatus())
+                    .statusDescription(report.getStatus().getDescription())
+                    .adminComment(report.getAdminComment())
+                    .processedById(report.getProcessedBy() != null ? report.getProcessedBy().getId() : null)
+                    .processedByNickname(report.getProcessedBy() != null ? report.getProcessedBy().getNickname() : null)
+                    .createdAt(report.getCreatedAt())
+                    .processedAt(report.getProcessedAt())
+                    .updatedAt(report.getUpdatedAt())
+                    .build();
+        }
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    public static class CommentReportDetailResponse {
+        private Long id;
+        private Long commentId;
+        private String commentContent;
+        private Long postId;
+        private String postTitle;
+        private Long commentAuthorId;
+        private String commentAuthorNickname;
+        private Long reporterId;
+        private String reporterNickname;
+        private ReportType reportType;
+        private String reportTypeDescription;
+        private String additionalReason;
+        private ReportStatus status;
+        private String statusDescription;
+        private String adminComment;
+        private Long processedById;
+        private String processedByNickname;
+        private LocalDateTime createdAt;
+        private LocalDateTime processedAt;
+        private LocalDateTime updatedAt;
+
+        public static CommentReportDetailResponse from(CommentReport report) {
+            return CommentReportDetailResponse.builder()
+                    .id(report.getCommentId()) // 복합 기본키의 commentId 부분 사용
+                    .commentId(report.getComment().getId())
+                    .commentContent(report.getComment().getContent())
+                    .postId(report.getComment().getPost().getId())
+                    .postTitle(report.getComment().getPost().getTitle())
+                    .commentAuthorId(report.getComment().getUser().getId())
+                    .commentAuthorNickname(report.getComment().getUser().getNickname())
+                    .reporterId(report.getUser().getId())
+                    .reporterNickname(report.getUser().getNickname())
+                    .reportType(report.getReportType())
+                    .reportTypeDescription(report.getReportType().getDescription())
+                    .additionalReason(report.getAdditionalReason())
+                    .status(report.getStatus())
+                    .statusDescription(report.getStatus().getDescription())
+                    .adminComment(report.getAdminComment())
+                    .processedById(report.getProcessedBy() != null ? report.getProcessedBy().getId() : null)
+                    .processedByNickname(report.getProcessedBy() != null ? report.getProcessedBy().getNickname() : null)
+                    .createdAt(report.getCreatedAt())
+                    .processedAt(report.getProcessedAt())
+                    .updatedAt(report.getUpdatedAt())
+                    .build();
+        }
+    }
+
+    // === 사용자 신고 내역 응답 ===
+    @Getter
+    @Setter
+    @Builder
+    public static class UserReportHistoryResponse {
+        private List<UserReportItem> postReports;
+        private List<UserReportItem> commentReports;
+        private long totalPostReports;
+        private long totalCommentReports;
+        private int currentPage;
+        private int totalPages;
+        private boolean hasNext;
+        private boolean hasPrevious;
+
+        @Getter
+        @Setter
+        @Builder
+        public static class UserReportItem {
+            private Long reportId;
+            private String reportType;
+            private String reportTypeDescription;
+            private String additionalReason;
+            private String status;
+            private String statusDescription;
+            private String adminComment;
+            private LocalDateTime createdAt;
+            private LocalDateTime processedAt;
+            private String targetTitle; // 게시글 제목 또는 댓글 내용 미리보기
+            private String targetType; // "POST" 또는 "COMMENT"
+        }
+    }
+
+    // === 신고 통계 응답 ===
+    @Getter
+    @Setter
     @Builder
     public static class ReportStatisticsResponse {
-        private long totalPendingReports;
-        private long totalApprovedReports;
-        private long totalRejectedReports;
-        private long totalProcessingReports;
-        
-        // 분류별 통계
-        private long commercialAdReports;
-        private long abuseDiscriminationReports;
-        private long pornographyInappropriateReports;
-        private long leakImpersonationFraudReports;
-        private long illegalVideoDistributionReports;
-        private long inappropriateForBoardReports;
-        private long trollingSpamReports;
+        private long totalPostReports;
+        private long totalCommentReports;
+        private long pendingPostReports;
+        private long pendingCommentReports;
+        private long processedPostReports;
+        private long processedCommentReports;
+        private Map<String, Long> postReportsByType;
+        private Map<String, Long> commentReportsByType;
+        private Map<String, Long> postReportsByStatus;
+        private Map<String, Long> commentReportsByStatus;
+        private List<DailyReportCount> dailyPostReports;
+        private List<DailyReportCount> dailyCommentReports;
+
+        @Getter
+        @Setter
+        @Builder
+        public static class DailyReportCount {
+            private String date;
+            private long count;
+        }
     }
 
     // 신고 분류 목록 응답

@@ -8,8 +8,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -65,7 +75,7 @@ public class ReportService {
         CommentReport report = CommentReport.createReport(comment, user, request.getReportType(), request.getAdditionalReason());
         CommentReport savedReport = commentReportRepository.save(report);
         
-        log.info("댓글 신고 생성 완료: reportId={}", savedReport.getId());
+        log.info("댓글 신고 생성 완료: commentId={}, userId={}", savedReport.getCommentId(), savedReport.getUserId());
         return ReportDto.CommentReportResponse.from(savedReport);
     }
 
@@ -87,9 +97,10 @@ public class ReportService {
     }
 
     // 댓글 신고 처리 (관리자용)
-    public ReportDto.CommentReportResponse processCommentReport(Long reportId, Long adminId, ReportDto.ProcessReportRequest request) {
-        log.info("댓글 신고 처리: reportId={}, adminId={}, status={}", reportId, adminId, request.getStatus());
+    public ReportDto.CommentReportResponse processCommentReport(Long commentId, Long userId, Long adminId, ReportDto.ProcessReportRequest request) {
+        log.info("댓글 신고 처리: commentId={}, userId={}, adminId={}, status={}", commentId, userId, adminId, request.getStatus());
         
+        CommentReportId reportId = new CommentReportId(commentId, userId);
         CommentReport report = commentReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다."));
         
@@ -99,7 +110,7 @@ public class ReportService {
         report.process(request.getStatus(), request.getAdminComment(), admin);
         CommentReport savedReport = commentReportRepository.save(report);
         
-        log.info("댓글 신고 처리 완료: reportId={}, status={}", savedReport.getId(), savedReport.getStatus());
+        log.info("댓글 신고 처리 완료: commentId={}, userId={}, status={}", savedReport.getCommentId(), savedReport.getUserId(), savedReport.getStatus());
         return ReportDto.CommentReportResponse.from(savedReport);
     }
 
@@ -139,56 +150,170 @@ public class ReportService {
         return reports.map(ReportDto.CommentReportResponse::from);
     }
 
-    // 신고 통계 조회 (관리자용)
-    public ReportDto.ReportStatisticsResponse getReportStatistics() {
-        log.info("신고 통계 조회");
+    // === 신고 상세 조회 ===
+    public ReportDto.PostReportDetailResponse getPostReportDetail(Long reportId) {
+        PostReport report = postReportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글 신고를 찾을 수 없습니다."));
         
-        return ReportDto.ReportStatisticsResponse.builder()
-                .totalPendingReports(
-                        postReportRepository.countByStatus(ReportStatus.PENDING) +
-                        commentReportRepository.countByStatus(ReportStatus.PENDING)
-                )
-                .totalApprovedReports(
-                        postReportRepository.countByStatus(ReportStatus.APPROVED) +
-                        commentReportRepository.countByStatus(ReportStatus.APPROVED)
-                )
-                .totalRejectedReports(
-                        postReportRepository.countByStatus(ReportStatus.REJECTED) +
-                        commentReportRepository.countByStatus(ReportStatus.REJECTED)
-                )
-                .totalProcessingReports(
-                        postReportRepository.countByStatus(ReportStatus.PROCESSING) +
-                        commentReportRepository.countByStatus(ReportStatus.PROCESSING)
-                )
-                .commercialAdReports(
-                        postReportRepository.countByReportType(ReportType.COMMERCIAL_AD) +
-                        commentReportRepository.countByReportType(ReportType.COMMERCIAL_AD)
-                )
-                .abuseDiscriminationReports(
-                        postReportRepository.countByReportType(ReportType.ABUSE_DISCRIMINATION) +
-                        commentReportRepository.countByReportType(ReportType.ABUSE_DISCRIMINATION)
-                )
-                .pornographyInappropriateReports(
-                        postReportRepository.countByReportType(ReportType.PORNOGRAPHY_INAPPROPRIATE) +
-                        commentReportRepository.countByReportType(ReportType.PORNOGRAPHY_INAPPROPRIATE)
-                )
-                .leakImpersonationFraudReports(
-                        postReportRepository.countByReportType(ReportType.LEAK_IMPERSONATION_FRAUD) +
-                        commentReportRepository.countByReportType(ReportType.LEAK_IMPERSONATION_FRAUD)
-                )
-                .illegalVideoDistributionReports(
-                        postReportRepository.countByReportType(ReportType.ILLEGAL_VIDEO_DISTRIBUTION) +
-                        commentReportRepository.countByReportType(ReportType.ILLEGAL_VIDEO_DISTRIBUTION)
-                )
-                .inappropriateForBoardReports(
-                        postReportRepository.countByReportType(ReportType.INAPPROPRIATE_FOR_BOARD) +
-                        commentReportRepository.countByReportType(ReportType.INAPPROPRIATE_FOR_BOARD)
-                )
-                .trollingSpamReports(
-                        postReportRepository.countByReportType(ReportType.TROLLING_SPAM) +
-                        commentReportRepository.countByReportType(ReportType.TROLLING_SPAM)
-                )
+        return ReportDto.PostReportDetailResponse.from(report);
+    }
+
+    public ReportDto.CommentReportDetailResponse getCommentReportDetail(Long commentId, Long userId) {
+        CommentReportId reportId = new CommentReportId(commentId, userId);
+        CommentReport report = commentReportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글 신고를 찾을 수 없습니다."));
+        
+        return ReportDto.CommentReportDetailResponse.from(report);
+    }
+
+    // === 사용자별 신고 내역 조회 ===
+    public ReportDto.UserReportHistoryResponse getUserReportHistory(Long userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        // 게시글 신고 내역
+        Page<PostReport> postReportPage = postReportRepository.findByUserId(userId, pageable);
+        List<ReportDto.UserReportHistoryResponse.UserReportItem> postReports = postReportPage.getContent().stream()
+                .map(report -> ReportDto.UserReportHistoryResponse.UserReportItem.builder()
+                        .reportId(report.getId())
+                        .reportType(report.getReportType().name())
+                        .reportTypeDescription(report.getReportType().getDescription())
+                        .additionalReason(report.getAdditionalReason())
+                        .status(report.getStatus().name())
+                        .statusDescription(report.getStatus().getDescription())
+                        .adminComment(report.getAdminComment())
+                        .createdAt(report.getCreatedAt())
+                        .processedAt(report.getProcessedAt())
+                        .targetTitle(report.getPost().getTitle())
+                        .targetType("POST")
+                        .build())
+                .collect(Collectors.toList());
+
+        // 댓글 신고 내역
+        Page<CommentReport> commentReportPage = commentReportRepository.findByUserId(userId, pageable);
+        List<ReportDto.UserReportHistoryResponse.UserReportItem> commentReports = commentReportPage.getContent().stream()
+                .map(report -> ReportDto.UserReportHistoryResponse.UserReportItem.builder()
+                        .reportId(report.getCommentId()) // 복합 기본키의 commentId 부분 사용
+                        .reportType(report.getReportType().name())
+                        .reportTypeDescription(report.getReportType().getDescription())
+                        .additionalReason(report.getAdditionalReason())
+                        .status(report.getStatus().name())
+                        .statusDescription(report.getStatus().getDescription())
+                        .adminComment(report.getAdminComment())
+                        .createdAt(report.getCreatedAt())
+                        .processedAt(report.getProcessedAt())
+                        .targetTitle(report.getComment().getContent().length() > 50 ? 
+                                report.getComment().getContent().substring(0, 50) + "..." : 
+                                report.getComment().getContent())
+                        .targetType("COMMENT")
+                        .build())
+                .collect(Collectors.toList());
+
+        return ReportDto.UserReportHistoryResponse.builder()
+                .postReports(postReports)
+                .commentReports(commentReports)
+                .totalPostReports(postReportPage.getTotalElements())
+                .totalCommentReports(commentReportPage.getTotalElements())
+                .currentPage(page)
+                .totalPages(Math.max(postReportPage.getTotalPages(), commentReportPage.getTotalPages()))
+                .hasNext(postReportPage.hasNext() || commentReportPage.hasNext())
+                .hasPrevious(postReportPage.hasPrevious() || commentReportPage.hasPrevious())
                 .build();
+    }
+
+    // === 신고 통계 조회 ===
+    public ReportDto.ReportStatisticsResponse getReportStatistics() {
+        // 전체 신고 수
+        long totalPostReports = postReportRepository.count();
+        long totalCommentReports = commentReportRepository.count();
+
+        // 상태별 신고 수
+        long pendingPostReports = postReportRepository.countByStatus(ReportStatus.PENDING);
+        long pendingCommentReports = commentReportRepository.countByStatus(ReportStatus.PENDING);
+        long processedPostReports = postReportRepository.countByStatusIn(Arrays.asList(ReportStatus.APPROVED, ReportStatus.REJECTED));
+        long processedCommentReports = commentReportRepository.countByStatusIn(Arrays.asList(ReportStatus.APPROVED, ReportStatus.REJECTED));
+
+        // 신고 유형별 통계
+        Map<String, Long> postReportsByType = Arrays.stream(ReportType.values())
+                .collect(Collectors.toMap(
+                        ReportType::name,
+                        type -> postReportRepository.countByReportType(type)
+                ));
+
+        Map<String, Long> commentReportsByType = Arrays.stream(ReportType.values())
+                .collect(Collectors.toMap(
+                        ReportType::name,
+                        type -> commentReportRepository.countByReportType(type)
+                ));
+
+        // 상태별 통계
+        Map<String, Long> postReportsByStatus = Arrays.stream(ReportStatus.values())
+                .collect(Collectors.toMap(
+                        ReportStatus::name,
+                        status -> postReportRepository.countByStatus(status)
+                ));
+
+        Map<String, Long> commentReportsByStatus = Arrays.stream(ReportStatus.values())
+                .collect(Collectors.toMap(
+                        ReportStatus::name,
+                        status -> commentReportRepository.countByStatus(status)
+                ));
+
+        // 최근 7일간 일별 신고 수
+        List<ReportDto.ReportStatisticsResponse.DailyReportCount> dailyPostReports = getDailyReportCounts(postReportRepository);
+        List<ReportDto.ReportStatisticsResponse.DailyReportCount> dailyCommentReports = getDailyReportCounts(commentReportRepository);
+
+        return ReportDto.ReportStatisticsResponse.builder()
+                .totalPostReports(totalPostReports)
+                .totalCommentReports(totalCommentReports)
+                .pendingPostReports(pendingPostReports)
+                .pendingCommentReports(pendingCommentReports)
+                .processedPostReports(processedPostReports)
+                .processedCommentReports(processedCommentReports)
+                .postReportsByType(postReportsByType)
+                .commentReportsByType(commentReportsByType)
+                .postReportsByStatus(postReportsByStatus)
+                .commentReportsByStatus(commentReportsByStatus)
+                .dailyPostReports(dailyPostReports)
+                .dailyCommentReports(dailyCommentReports)
+                .build();
+    }
+
+    private List<ReportDto.ReportStatisticsResponse.DailyReportCount> getDailyReportCounts(PostReportRepository repository) {
+        LocalDate today = LocalDate.now();
+        List<ReportDto.ReportStatisticsResponse.DailyReportCount> dailyCounts = new ArrayList<>();
+        
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(23, 59, 59);
+            
+            long count = repository.countByCreatedAtBetween(startOfDay, endOfDay);
+            dailyCounts.add(ReportDto.ReportStatisticsResponse.DailyReportCount.builder()
+                    .date(date.toString())
+                    .count(count)
+                    .build());
+        }
+        
+        return dailyCounts;
+    }
+
+    private List<ReportDto.ReportStatisticsResponse.DailyReportCount> getDailyReportCounts(CommentReportRepository repository) {
+        LocalDate today = LocalDate.now();
+        List<ReportDto.ReportStatisticsResponse.DailyReportCount> dailyCounts = new ArrayList<>();
+        
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(23, 59, 59);
+            
+            long count = repository.countByCreatedAtBetween(startOfDay, endOfDay);
+            dailyCounts.add(ReportDto.ReportStatisticsResponse.DailyReportCount.builder()
+                    .date(date.toString())
+                    .count(count)
+                    .build());
+        }
+        
+        return dailyCounts;
     }
 
     // 신고 분류 목록 조회

@@ -7,12 +7,37 @@ import lombok.Setter;
 
 public class PasswordResetDto {
 
+    // 1단계: 이메일 입력 (인증코드 발송)
     @Getter
     @Setter
-    public static class ResetPasswordRequest {
-        @NotBlank(message = "휴대폰 번호는 필수입니다.")
-        @Pattern(regexp = "^\\d{3}-\\d{3,4}-\\d{4}$", message = "휴대폰 번호 형식이 올바르지 않습니다.")
-        private String phoneNumber;
+    public static class SendResetCodeRequest {
+        @NotBlank(message = "이메일은 필수입니다.")
+        @Pattern(regexp = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", 
+                message = "이메일 형식이 올바르지 않습니다.")
+        private String email;
+    }
+
+    // 2단계: 인증코드 검증 (임시비밀번호 발급)
+    @Getter
+    @Setter
+    public static class VerifyResetCodeRequest {
+        @NotBlank(message = "이메일은 필수입니다.")
+        @Pattern(regexp = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", 
+                message = "이메일 형식이 올바르지 않습니다.")
+        private String email;
+
+        @NotBlank(message = "인증코드는 필수입니다.")
+        private String verificationCode;
+    }
+
+    // 3단계: 새 비밀번호 설정 (선택사항)
+    @Getter
+    @Setter
+    public static class SetNewPasswordRequest {
+        @NotBlank(message = "이메일은 필수입니다.")
+        @Pattern(regexp = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", 
+                message = "이메일 형식이 올바르지 않습니다.")
+        private String email;
 
         @NotBlank(message = "새 비밀번호는 필수입니다.")
         @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$",
@@ -20,15 +45,23 @@ public class PasswordResetDto {
         private String newPassword;
     }
 
+    // 공통 응답
     @Getter
     @Setter
     public static class ResetPasswordResponse {
         private String message;
         private boolean success;
+        private String temporaryPassword; // 임시비밀번호 (인증코드 검증 성공 시)
 
         public ResetPasswordResponse(String message, boolean success) {
             this.message = message;
             this.success = success;
+        }
+
+        public ResetPasswordResponse(String message, boolean success, String temporaryPassword) {
+            this.message = message;
+            this.success = success;
+            this.temporaryPassword = temporaryPassword;
         }
     }
 } 

@@ -36,42 +36,7 @@ public class PostActionController {
         }
     }
 
-    // === 게시글 좋아요 (기존 방식 - 주석 처리) ===
-    /*
-    @PostMapping("/{postId}/like")
-    public ResponseEntity<PostActionDto.ActionResponse> likePost(@PathVariable Long postId) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 좋아요 요청 - 게시글: {}, 사용자: {}", postId, username);
-            PostActionDto.ActionResponse response = postActionService.likePost(postId, username);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("게시글 좋아요 오류: ", e);
-            return ResponseEntity.badRequest().body(
-                new PostActionDto.ActionResponse("게시글 좋아요 실패: " + e.getMessage(), 0, false, false, false)
-            );
-        }
-    }
 
-    @DeleteMapping("/{postId}/like")
-    public ResponseEntity<PostActionDto.ActionResponse> unlikePost(@PathVariable Long postId) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 좋아요 취소 요청 - 게시글: {}, 사용자: {}", postId, username);
-            PostActionDto.ActionResponse response = postActionService.unlikePost(postId, username);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("게시글 좋아요 취소 오류: ", e);
-            return ResponseEntity.badRequest().body(
-                new PostActionDto.ActionResponse("게시글 좋아요 취소 실패: " + e.getMessage(), 0, false, false, false)
-            );
-        }
-    }
-    */
 
     // === 게시글 신고 ===
     @PostMapping("/{postId}/report")

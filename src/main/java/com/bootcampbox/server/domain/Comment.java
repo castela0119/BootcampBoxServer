@@ -43,15 +43,6 @@ public class Comment {
     )
     private Set<User> likedUsers = new HashSet<>();
 
-    // 신고: 중복 방지 위해 Set 사용
-    @ManyToMany
-    @JoinTable(
-        name = "comment_reports",
-        joinColumns = @JoinColumn(name = "comment_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> reportedUsers = new HashSet<>();
-
     // 신고 횟수(성능 및 관리자 쿼리용)
     @Column(nullable = false)
     private int reportCount = 0;
@@ -91,27 +82,13 @@ public class Comment {
         return likedUsers;
     }
 
-    // 신고 추가
-    public boolean report(User user) {
-        boolean added = reportedUsers.add(user);
-        if (added) {
-            reportCount++;
-        }
-        return added;
-    }
-    // 신고 취소(관리자용)
-    public boolean unreport(User user) {
-        boolean removed = reportedUsers.remove(user);
-        if (removed && reportCount > 0) {
-            reportCount--;
-        }
-        return removed;
-    }
-    // 신고 수
+    // 신고 수 (CommentReport 엔티티에서 관리)
     public int getReportCount() {
         return reportCount;
     }
-    public Set<User> getReportedUsers() {
-        return reportedUsers;
+    
+    // 신고 수 업데이트 (CommentReport 서비스에서 호출)
+    public void setReportCount(int reportCount) {
+        this.reportCount = reportCount;
     }
 } 
