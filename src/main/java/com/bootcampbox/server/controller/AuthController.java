@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import com.bootcampbox.server.exception.AdminLoginException;
+import org.springframework.security.authentication.BadCredentialsException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,10 +32,36 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto loginRequest) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDto loginRequest) {
         log.info("[my-log] 로그인 요청 - email: {}, password: {}", loginRequest.getEmail(), loginRequest.getPassword());
-        LoginResponseDto response = authService.login(loginRequest);
-        return ResponseEntity.ok(response);
+        try {
+            LoginResponseDto response = authService.login(loginRequest);
+            return ResponseEntity.ok(response);
+        } catch (AdminLoginException e) {
+            log.error("관리자 로그인 실패: ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("error", "AdminLoginException");
+            errorResponse.put("timestamp", LocalDateTime.now().toString());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (BadCredentialsException e) {
+            log.error("로그인 실패 (BadCredentials): ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("error", "BadCredentialsException");
+            errorResponse.put("timestamp", LocalDateTime.now().toString());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (Exception e) {
+            log.error("로그인 실패 (기타): ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "로그인 중 오류가 발생했습니다.");
+            errorResponse.put("error", e.getClass().getSimpleName());
+            errorResponse.put("timestamp", LocalDateTime.now().toString());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     @PostMapping("/logout")

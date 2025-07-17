@@ -10,7 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/comments")
+@RequestMapping("/api/posts/comments")
 @RequiredArgsConstructor
 @Slf4j
 public class CommentActionController {

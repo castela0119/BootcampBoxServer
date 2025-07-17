@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Random;
+import com.bootcampbox.server.domain.User;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,6 @@ public class PasswordResetService {
     }
 
     // 2단계: 인증코드 검증 및 임시비밀번호 발급
-    @Transactional
     public PasswordResetDto.ResetPasswordResponse verifyResetCode(PasswordResetDto.VerifyResetCodeRequest request) {
         // 이메일로 가입된 사용자가 있는지 확인
         if (!userRepository.existsByEmail(request.getEmail())) {
@@ -48,22 +48,24 @@ public class PasswordResetService {
             return new PasswordResetDto.ResetPasswordResponse("인증코드가 올바르지 않거나 만료되었습니다.", false);
         }
 
-        // 임시비밀번호 생성
-        String temporaryPassword = generateTemporaryPassword();
+            // 임시 비밀번호 생성 (8자리)
+    String tempPassword = generateTemporaryPassword();
         
-        // 사용자 비밀번호를 임시비밀번호로 변경
-        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
-            user.setPassword(passwordEncoder.encode(temporaryPassword));
-            userRepository.save(user);
-        });
+        // 사용자 비밀번호 업데이트 (BCrypt로 인코딩)
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        // BCrypt로 비밀번호 인코딩
+        String encodedPassword = passwordEncoder.encode(tempPassword);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
 
-        // 임시비밀번호를 이메일로 발송
-        emailService.sendTemporaryPassword(request.getEmail(), temporaryPassword);
+        // 임시 비밀번호를 이메일로 발송 (모의 발송)
+        emailService.sendTemporaryPassword(request.getEmail(), tempPassword);
 
         return new PasswordResetDto.ResetPasswordResponse(
-            "인증이 완료되었습니다. 임시비밀번호가 이메일로 발송되었습니다.", 
-            true,
-            temporaryPassword // 개발/테스트용으로 응답에도 포함
+            "임시 비밀번호가 이메일로 발송되었습니다. (모의발송: " + tempPassword + ")", 
+            true
         );
     }
 

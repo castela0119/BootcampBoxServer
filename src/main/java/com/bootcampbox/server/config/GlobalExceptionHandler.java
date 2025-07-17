@@ -16,6 +16,7 @@ import io.jsonwebtoken.JwtException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import com.bootcampbox.server.exception.AdminLoginException;
 
 @RestControllerAdvice
 @Slf4j
@@ -46,13 +47,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, Object>> handleBadCredentialsException(BadCredentialsException e) {
-        log.error("BadCredentialsException 발생: ", e);
+    @ExceptionHandler(AdminLoginException.class)
+    public ResponseEntity<Map<String, Object>> handleAdminLoginException(AdminLoginException e) {
+        log.error("AdminLoginException 발생: ", e);
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("success", false);
-        errorResponse.put("message", "이메일 또는 비밀번호가 올바르지 않습니다.");
-        errorResponse.put("error", "BadCredentialsException");
+        errorResponse.put("message", e.getMessage());
+        errorResponse.put("error", "AdminLoginException");
         errorResponse.put("timestamp", LocalDateTime.now().toString());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
