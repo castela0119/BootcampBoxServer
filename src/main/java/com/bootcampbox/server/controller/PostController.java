@@ -24,11 +24,18 @@ public class PostController {
 
     @PostMapping
     public ResponseEntity<PostDto.Response> createPost(
-            @RequestParam Long userId,
             @Valid @RequestBody PostDto.CreateRequest request) {
-        log.info("게시글 작성 요청: userId={}, title={}", userId, request.getTitle());
-        PostDto.Response response = postService.createPost(userId, request);
-        return ResponseEntity.ok(response);
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            log.info("게시글 작성 요청: username={}, title={}", username, request.getTitle());
+            PostDto.Response response = postService.createPost(username, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 작성 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/{postId}")
@@ -47,9 +54,20 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<PostDto.Response>> getAllPosts(Pageable pageable) {
-        log.info("전체 게시글 목록 조회 요청: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
-        Page<PostDto.Response> response = postService.getAllPosts(pageable);
+    public ResponseEntity<Page<PostDto.Response>> getAllPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String authorUserType,
+            @RequestParam(required = false) String tags, // 복수 태그 (콤마 구분)
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        
+        log.info("게시글 목록 조회 요청: page={}, size={}, search={}, authorUserType={}, tags={}, sortBy={}, sortOrder={}", 
+                page, size, search, authorUserType, tags, sortBy, sortOrder);
+        
+        Page<PostDto.Response> response = postService.getAllPostsWithFilters(
+                page, size, search, authorUserType, tags, sortBy, sortOrder);
         return ResponseEntity.ok(response);
     }
 
@@ -66,20 +84,33 @@ public class PostController {
     @PutMapping("/{postId}")
     public ResponseEntity<PostDto.Response> updatePost(
             @PathVariable Long postId,
-            @RequestParam Long userId,
             @Valid @RequestBody PostDto.UpdateRequest request) {
-        log.info("게시글 수정 요청: postId={}, userId={}, title={}", postId, userId, request.getTitle());
-        PostDto.Response response = postService.updatePost(postId, userId, request);
-        return ResponseEntity.ok(response);
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            log.info("게시글 수정 요청: postId={}, username={}, title={}", postId, username, request.getTitle());
+            PostDto.Response response = postService.updatePost(postId, username, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 수정 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(
-            @PathVariable Long postId,
-            @RequestParam Long userId) {
-        log.info("게시글 삭제 요청: postId={}, userId={}", postId, userId);
-        postService.deletePost(postId, userId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+            
+            log.info("게시글 삭제 요청: postId={}, username={}", postId, username);
+            postService.deletePost(postId, username);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("게시글 삭제 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     // 태그 검색 관련 API들

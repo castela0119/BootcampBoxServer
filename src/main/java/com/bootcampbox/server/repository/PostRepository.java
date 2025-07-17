@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface PostRepository extends JpaRepository<Post, Long> {
+public interface PostRepository extends JpaRepository<Post, Long>, PostRepositoryCustom {
     Page<Post> findAllByOrderByCreatedAtDesc(Pageable pageable);
     Page<Post> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
     
@@ -49,9 +48,51 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT DISTINCT p FROM Post p JOIN p.tags t WHERE t.name IN :tagNames ORDER BY p.createdAt DESC")
     Page<Post> findByAnyTags(@Param("tagNames") List<String> tagNames, Pageable pageable);
     
-    // 제목, 내용, 태그로 통합 검색
+    // 제목, 내용, 태그로 통합 검색 (AND 조건)
+    @Query("SELECT DISTINCT p FROM Post p LEFT JOIN p.tags t WHERE " +
+           "p.title LIKE %:keyword% AND p.content LIKE %:keyword% " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    
+    // 제목, 내용, 태그로 통합 검색 (OR 조건 - 기존 방식)
     @Query("SELECT DISTINCT p FROM Post p LEFT JOIN p.tags t WHERE " +
            "p.title LIKE %:keyword% OR p.content LIKE %:keyword% OR t.name LIKE %:keyword% " +
            "ORDER BY p.createdAt DESC")
-    Page<Post> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    Page<Post> searchByKeywordOr(@Param("keyword") String keyword, Pageable pageable);
+
+    // 게시글 필터링을 위한 메서드들
+    Page<Post> findByAuthorUserType(String authorUserType, Pageable pageable);
+    
+    // 복합 필터링 (검색 OR 조건 + 작성자 타입 + 태그)
+    @Query(value = "SELECT p.* FROM posts p " +
+           "LEFT JOIN users a ON p.user_id = a.id " +
+           "LEFT JOIN post_tags pt ON p.id = pt.post_id " +
+           "LEFT JOIN tags t ON pt.tag_id = t.id " +
+           "WHERE (:search IS NULL OR (LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :search, '%')))) " +
+           "AND (:authorUserType IS NULL OR a.user_type = :authorUserType) " +
+           "GROUP BY p.id " +
+           "HAVING (:tagCount IS NULL OR COUNT(DISTINCT CASE WHEN t.name IN (:tagList) THEN t.name END) = :tagCount) order by p.created_at desc",
+           countQuery = "SELECT COUNT(DISTINCT p.id) FROM posts p " +
+           "LEFT JOIN users a ON p.user_id = a.id " +
+           "LEFT JOIN post_tags pt ON p.id = pt.post_id " +
+           "LEFT JOIN tags t ON pt.tag_id = t.id " +
+           "WHERE (:search IS NULL OR (LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :search, '%')))) " +
+           "AND (:authorUserType IS NULL OR a.user_type = :authorUserType) " +
+           "GROUP BY p.id " +
+           "HAVING (:tagCount IS NULL OR COUNT(DISTINCT CASE WHEN t.name IN (:tagList) THEN t.name END) = :tagCount)",
+           nativeQuery = true)
+    Page<Post> findPostsWithFilters(
+            @Param("search") String search,
+            @Param("authorUserType") String authorUserType,
+            @Param("tags") String tags,
+            @Param("tagList") List<String> tagList,
+            @Param("tagCount") Long tagCount,
+            Pageable pageable);
+    
+    // 인기순 정렬을 위한 메서드들
+    Page<Post> findAllByOrderByLikeCountDesc(Pageable pageable);
+    Page<Post> findAllByOrderByViewCountDesc(Pageable pageable);
+    Page<Post> findAllByOrderByCommentCountDesc(Pageable pageable);
 } 
