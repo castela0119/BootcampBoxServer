@@ -574,6 +574,215 @@ class AuthService {
 
 ---
 
+## 🔄 댓글 페이징 문제 해결 가이드
+
+### 🚨 발견된 문제점 (클라이언트 로그 분석)
+
+```
+🔄 새로고침: 기존 댓글 목록 교체
+✅ 댓글 목록 업데이트 완료:
+  - 이전 페이지: 0 → 현재 페이지: 1  ← 문제!
+```
+
+**문제 원인:**
+1. **첫 번째 요청이 새로고침 모드로 실행됨** (`refresh=true`)
+2. **페이지 번호가 잘못 증가됨** (0 → 1)
+3. **두 번째 요청부터 페이지 2를 요청** (데이터 없음)
+
+### 🚨 추가 발견된 문제점 (최신 로그 분석)
+
+```
+📥 추가 로드: 기존 댓글에 새 댓글 추가
+✅ 댓글 목록 업데이트 완료:
+  - 이전 페이지: 0 → 현재 페이지: 1  ← 여전히 문제!
+```
+
+**새로운 문제 원인:**
+1. **페이지 번호 증가 로직이 잘못됨** - 서버 응답의 `currentPage`를 그대로 사용하지 않고 클라이언트에서 증가시킴
+2. **첫 번째 요청에서 이미 페이지가 1로 설정됨** - 두 번째 요청은 페이지 2를 요청
+
+### 🔧 구체적인 해결 방법
+
+#### 1. 페이지 번호 증가 로직 수정 (가장 중요!)
+
+```dart
+// ❌ 잘못된 방법 (현재 클라이언트 코드)
+state.currentPage = commentListResponse.currentPage + 1; // 이렇게 하면 안됨!
+
+// ✅ 올바른 방법
+if (refresh) {
+  // 새로고침 모드: 페이지를 0으로 초기화
+  state.currentPage = 0;
+} else {
+  // 추가 로딩 모드: 현재 페이지 + 1
+  state.currentPage = commentListResponse.currentPage + 1;
+}
+```
+
+#### 2. 완전히 수정된 댓글 로딩 로직
+
+```dart
+Future<void> loadComments(int postId, {bool refresh = false}) async {
+  print('=== 댓글 로딩 시작 ===');
+  print('새로고침 모드: $refresh');
+  print('현재 페이지: ${state.currentPage}');
+  print('로딩 중: ${state.isLoading}');
+  print('다음 페이지 있음: ${state.hasNext}');
+  
+  if (refresh) {
+    print('🔄 새로고침 모드: 상태 초기화');
+    state.reset();
+  }
+  
+  // 이미 로딩 중이거나 더 이상 데이터가 없으면 중단
+  if (state.isLoading || !state.hasNext) {
+    print('❌ 로딩 중단: isLoading=${state.isLoading}, hasNext=${state.hasNext}');
+    return;
+  }
+  
+  try {
+    state.isLoading = true;
+    
+    print('📡 API 요청: page=${state.currentPage}, size=10');
+    final response = await dio.get(
+      '/api/posts/$postId/comments',
+      queryParameters: {
+        'page': state.currentPage,
+        'size': 10,
+      },
+    );
+    
+    final commentListResponse = CommentListResponse.fromJson(response.data);
+    
+    print('📊 서버 응답 분석:');
+    print('  - 새로 받은 댓글: ${commentListResponse.comments.length}개');
+    print('  - 총 댓글 수: ${commentListResponse.totalComments}개');
+    print('  - 서버 응답 현재 페이지: ${commentListResponse.currentPage}');
+    print('  - 총 페이지: ${commentListResponse.totalPages}');
+    print('  - 다음 페이지 있음: ${commentListResponse.hasNext}');
+    
+    if (refresh) {
+      print('🔄 새로고침: 기존 댓글 목록 교체');
+      state.comments = commentListResponse.comments;
+    } else {
+      print('➕ 추가 로딩: 기존 댓글에 추가');
+      state.comments.addAll(commentListResponse.comments);
+    }
+    
+    // 중요: 서버 응답의 hasNext 값을 사용
+    state.hasNext = commentListResponse.hasNext;
+    
+    // 중요: 페이지 번호 증가 로직 수정
+    if (refresh) {
+      // 새로고침 모드: 다음 페이지는 1
+      state.currentPage = 1;
+      print('🔄 새로고침 후 다음 페이지: 1');
+    } else {
+      // 추가 로딩 모드: 현재 페이지 + 1
+      state.currentPage = commentListResponse.currentPage + 1;
+      print('➕ 추가 로딩 후 다음 페이지: ${state.currentPage}');
+    }
+    
+    print('✅ 댓글 목록 업데이트 완료:');
+    print('  - 현재 댓글 수: ${state.comments.length}개');
+    print('  - 총 댓글 수: ${commentListResponse.totalComments}개');
+    print('  - 다음 요청 페이지: ${state.currentPage}');
+    print('  - 더 불러올 수 있음: ${state.hasNext}');
+    
+  } catch (e) {
+    print('❌ 댓글 로딩 오류: $e');
+  } finally {
+    state.isLoading = false;
+    print('🏁 댓글 로딩 완료: isLoading=${state.isLoading}');
+  }
+}
+```
+
+#### 3. 새 댓글 작성 후 올바른 새로고침
+
+```dart
+Future<void> createComment(int postId, String content) async {
+  try {
+    print('📝 댓글 작성 시작');
+    await dio.post(
+      '/api/posts/$postId/comments',
+      data: {'content': content},
+    );
+    
+    print('✅ 댓글 작성 성공, 목록 새로고침');
+    // 댓글 작성 성공 후 목록 새로고침
+    await loadComments(postId, refresh: true);
+    
+  } catch (e) {
+    print('❌ 댓글 작성 오류: $e');
+  }
+}
+```
+
+#### 4. 상태 초기화 수정
+
+```dart
+class CommentListState {
+  List<Comment> comments = [];
+  int currentPage = 0; // 초기값 0
+  bool isLoading = false;
+  bool hasNext = true; // 초기값 true
+  
+  void reset() {
+    print('🔄 상태 초기화');
+    comments.clear();
+    currentPage = 0; // 0으로 초기화 (중요!)
+    isLoading = false;
+    hasNext = true; // true로 초기화
+    print('  - currentPage: $currentPage');
+    print('  - hasNext: $hasNext');
+  }
+}
+```
+
+#### 5. 무한 스크롤 트리거 수정
+
+```dart
+// 스크롤이 끝에 도달했을 때
+void _onScrollEnd() {
+  print('📜 스크롤 끝 도달');
+  print('  - 현재 댓글 수: ${state.comments.length}');
+  print('  - 로딩 중: ${state.isLoading}');
+  print('  - 다음 페이지 있음: ${state.hasNext}');
+  
+  if (!state.isLoading && state.hasNext) {
+    print('🔄 추가 댓글 로딩 시작');
+    loadComments(postId, refresh: false); // refresh=false로 추가 로딩
+  } else {
+    print('❌ 추가 로딩 불가: isLoading=${state.isLoading}, hasNext=${state.hasNext}');
+  }
+}
+```
+
+### 🧪 테스트 시나리오
+
+**정상적인 동작 순서:**
+1. **초기 로딩**: `page=0` → 댓글 1~10번 (10개)
+2. **스크롤 끝**: `page=1` → 댓글 11~20번 (10개)
+3. **더 이상 없음**: `hasNext=false` → 로딩 중단
+
+**현재 잘못된 동작:**
+1. **초기 로딩**: `page=0` → 댓글 1~10번 (10개) ✅
+2. **페이지 증가**: `currentPage=1` ❌
+3. **다음 요청**: `page=1` → 댓글 11~20번 (10개) ✅
+4. **페이지 증가**: `currentPage=2` ❌
+5. **다음 요청**: `page=2` → 데이터 없음 ❌
+
+### ✅ 확인 체크리스트
+
+- [ ] 초기 로딩 시 `refresh=false` 사용
+- [ ] 새 댓글 작성 후에만 `refresh=true` 사용
+- [ ] 서버 응답의 `hasNext` 값을 그대로 사용
+- [ ] 페이지 번호를 `currentPage + 1`로 증가
+- [ ] 로딩 중이거나 `hasNext=false`일 때 추가 요청 중단
+
+---
+
 ## ⚠️ 주의사항
 
 ### 1. 보안 관련

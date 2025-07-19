@@ -34,7 +34,18 @@ public class EmailVerificationService {
     }
 
     public boolean isEmailVerified(String email) {
+        // 개발 환경에서는 모든 이메일을 인증된 것으로 처리
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        String sys = System.getProperty("spring.profiles.active", "");
+        if ((env != null && env.contains("local")) || (sys != null && sys.contains("local"))) {
+            return true;
+        }
         return verifiedEmails.getOrDefault(email, false);
+    }
+
+    // ====== [개발용] 이메일 강제 인증 메서드 ======
+    public void forceVerifyEmail(String email) {
+        verifiedEmails.put(email, true);
     }
 
     private static class VerificationInfo {
