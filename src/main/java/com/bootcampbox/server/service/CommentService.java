@@ -69,6 +69,10 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         
+        // Post의 댓글 수 업데이트
+        post.updateCommentCount();
+        postRepository.save(post);
+        
         // HOT 점수 업데이트
         hotPostService.updatePostHotScore(postId);
         
@@ -171,12 +175,17 @@ public class CommentService {
         // 삭제 실행
         commentRepository.delete(comment);
         
+        // Post의 댓글 수 업데이트
+        Post post = comment.getPost();
+        post.updateCommentCount();
+        postRepository.save(post);
+        
         // 삭제 후 영속성 컨텍스트 정리
         entityManager.flush();
         entityManager.clear();
         
         // HOT 점수 업데이트
-        hotPostService.updatePostHotScore(comment.getPost().getId());
+        hotPostService.updatePostHotScore(post.getId());
         
         return new CommentDto.SimpleResponse("댓글이 성공적으로 삭제되었습니다.", true);
     }
