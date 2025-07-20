@@ -22,6 +22,7 @@ import java.util.List;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationSettingsService settingsService;
 
     // 알림 목록 조회 (페이징)
     public NotificationDto.NotificationListResponse getMyNotifications(String username, int page, int size) {
@@ -89,6 +90,12 @@ public class NotificationService {
                 return;
             }
             
+            // 알림 설정 확인
+            if (!settingsService.isNotificationEnabled(recipient.getId(), "comment")) {
+                log.info("댓글 알림 비활성화 - 수신자: {}", recipient.getUsername());
+                return;
+            }
+            
             Notification notification = Notification.createCommentNotification(recipient, sender, postId);
             notificationRepository.save(notification);
             
@@ -108,6 +115,12 @@ public class NotificationService {
                 return;
             }
             
+            // 알림 설정 확인
+            if (!settingsService.isNotificationEnabled(recipient.getId(), "like")) {
+                log.info("좋아요 알림 비활성화 - 수신자: {}", recipient.getUsername());
+                return;
+            }
+            
             Notification notification = Notification.createLikeNotification(recipient, sender, targetType, targetId);
             notificationRepository.save(notification);
             
@@ -122,6 +135,12 @@ public class NotificationService {
     @Transactional
     public void sendSystemNotification(User recipient, String title, String content) {
         try {
+            // 알림 설정 확인
+            if (!settingsService.isNotificationEnabled(recipient.getId(), "system")) {
+                log.info("시스템 알림 비활성화 - 수신자: {}", recipient.getUsername());
+                return;
+            }
+            
             Notification notification = Notification.createSystemNotification(recipient, title, content);
             notificationRepository.save(notification);
             
