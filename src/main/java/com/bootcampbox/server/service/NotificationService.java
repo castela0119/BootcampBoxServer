@@ -23,6 +23,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final NotificationSettingsService settingsService;
+    private final PostMuteService postMuteService;
 
     // 알림 목록 조회 (페이징)
     public NotificationDto.NotificationListResponse getMyNotifications(String username, int page, int size) {
@@ -90,6 +91,12 @@ public class NotificationService {
                 return;
             }
             
+            // 게시글 뮤트 확인
+            if (postMuteService.isPostMuted(recipient.getId(), postId)) {
+                log.info("뮤트된 게시글 댓글 알림 차단 - 수신자: {}, 게시글: {}", recipient.getUsername(), postId);
+                return;
+            }
+            
             // 알림 설정 확인
             if (!settingsService.isNotificationEnabled(recipient.getId(), "comment")) {
                 log.info("댓글 알림 비활성화 - 수신자: {}", recipient.getUsername());
@@ -112,6 +119,12 @@ public class NotificationService {
         try {
             // 자신의 게시글/댓글에 좋아요를 누르면 알림을 보내지 않음
             if (recipient.getId().equals(sender.getId())) {
+                return;
+            }
+            
+            // 게시글 좋아요인 경우 뮤트 확인
+            if ("post".equals(targetType) && postMuteService.isPostMuted(recipient.getId(), targetId)) {
+                log.info("뮤트된 게시글 좋아요 알림 차단 - 수신자: {}, 게시글: {}", recipient.getUsername(), targetId);
                 return;
             }
             
