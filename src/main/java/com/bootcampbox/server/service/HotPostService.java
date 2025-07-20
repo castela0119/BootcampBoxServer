@@ -83,7 +83,7 @@ public class HotPostService {
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         
         int oldHotScore = post.getHotScore();
-        boolean oldIsHot = post.isHot();
+        boolean oldIsHot = post.getIsHot();
         
         // HOT 점수 수동 설정
         post.setHotScore(newHotScore);
@@ -91,7 +91,7 @@ public class HotPostService {
         
         // HOT 게시글 선정 기준: 80점 이상
         boolean newIsHot = newHotScore >= 80;
-        post.setHot(newIsHot);
+        post.setIsHot(newIsHot);
         
         postRepository.save(post);
         
@@ -113,13 +113,13 @@ public class HotPostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
         
-        boolean oldIsHot = post.isHot();
+        boolean oldIsHot = post.getIsHot();
         int oldHotScore = post.getHotScore();
         
         // HOT 점수 재계산
         post.updateHotScore();
         
-        boolean newIsHot = post.isHot();
+        boolean newIsHot = post.getIsHot();
         int newHotScore = post.getHotScore();
         
         postRepository.save(post);
@@ -155,13 +155,13 @@ public class HotPostService {
                 }
                 
                 for (Post post : postPage.getContent()) {
-                    boolean oldIsHot = post.isHot();
+                    boolean oldIsHot = post.getIsHot();
                     int oldHotScore = post.getHotScore();
                     
                     // HOT 점수 재계산
                     post.updateHotScore();
                     
-                    if (oldIsHot != post.isHot()) {
+                    if (oldIsHot != post.getIsHot()) {
                         hotStatusChanged++;
                     }
                     
@@ -197,7 +197,7 @@ public class HotPostService {
         int excludedCount = 0;
         
         for (Post post : oldHotPosts) {
-            post.setHot(false);
+            post.setIsHot(false);
             post.setHotUpdatedAt(LocalDateTime.now());
             excludedCount++;
             
@@ -220,6 +220,6 @@ public class HotPostService {
         postRepository.save(post);
         
         log.info("새 게시글 HOT 점수 초기화 - 게시글: {}, 제목: {}, HOT 점수: {}, HOT 상태: {}", 
-                post.getId(), post.getTitle(), post.getHotScore(), post.isHot());
+                post.getId(), post.getTitle(), post.getHotScore(), post.getIsHot());
     }
 } 

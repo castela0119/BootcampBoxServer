@@ -49,7 +49,7 @@ public class HotPostDto {
             response.setCommentCount(post.getCommentCount());
             response.setViewCount(post.getViewCount());
             response.setHotScore(post.getHotScore());
-            response.setHot(post.isHot());
+            response.setHot(post.getIsHot());
             response.setHotUpdatedAt(post.getHotUpdatedAt());
             response.setTagNames(post.getTags().stream()
                     .map(tag -> tag.getName())

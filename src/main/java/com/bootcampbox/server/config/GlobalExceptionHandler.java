@@ -12,6 +12,9 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import io.jsonwebtoken.JwtException;
+import org.springframework.orm.jpa.JpaSystemException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.hibernate.PropertyValueException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -100,6 +103,39 @@ public class GlobalExceptionHandler {
         errorResponse.put("error", "JwtException");
         errorResponse.put("timestamp", LocalDateTime.now().toString());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<Map<String, Object>> handleJpaSystemException(JpaSystemException e) {
+        log.error("JpaSystemException 발생: ", e);
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("message", "데이터베이스 처리 중 오류가 발생했습니다.");
+        errorResponse.put("error", "JpaSystemException");
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("DataIntegrityViolationException 발생: ", e);
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("message", "데이터 무결성 위반이 발생했습니다.");
+        errorResponse.put("error", "DataIntegrityViolationException");
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(PropertyValueException.class)
+    public ResponseEntity<Map<String, Object>> handlePropertyValueException(PropertyValueException e) {
+        log.error("PropertyValueException 발생: ", e);
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("message", "필수 필드 값이 누락되었습니다: " + e.getPropertyName());
+        errorResponse.put("error", "PropertyValueException");
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

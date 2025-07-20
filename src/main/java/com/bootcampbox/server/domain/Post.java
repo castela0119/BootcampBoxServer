@@ -72,10 +72,10 @@ public class Post {
     
     // HOT 관련 필드
     @Column(name = "hot_score")
-    private int hotScore = 0; // HOT 점수
+    private Integer hotScore = 0; // HOT 점수
     
     @Column(name = "is_hot")
-    private boolean isHot = false; // HOT 게시글 여부
+    private Boolean isHot = false; // HOT 게시글 여부
     
     @Column(name = "hot_updated_at")
     private LocalDateTime hotUpdatedAt = LocalDateTime.now(); // HOT 점수 마지막 업데이트 시간
