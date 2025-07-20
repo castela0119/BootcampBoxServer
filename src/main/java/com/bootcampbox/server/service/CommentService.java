@@ -36,6 +36,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CommentReportRepository commentReportRepository;
     private final HotPostService hotPostService;
+    private final NotificationService notificationService;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -75,6 +76,9 @@ public class CommentService {
         
         // HOT 점수 업데이트
         hotPostService.updatePostHotScore(postId);
+        
+        // 댓글 알림 생성 (게시글 작성자에게)
+        notificationService.sendCommentNotification(post.getUser(), user, postId);
         
         return CommentDto.CommentResponse.from(savedComment, user.getId());
     }
@@ -274,6 +278,9 @@ public class CommentService {
             // 좋아요 추가
             boolean added = comment.like(user);
             commentRepository.save(comment);
+
+            // 댓글 좋아요 알림 생성
+            notificationService.sendLikeNotification(comment.getUser(), user, "comment", commentId);
 
             String msg = "댓글에 좋아요를 눌렀습니다.";
             return new CommentActionDto.ActionResponse(msg, comment.getLikeCount(), true);

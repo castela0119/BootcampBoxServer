@@ -22,6 +22,7 @@ public class PostActionService {
     private final PostReportRepository postReportRepository;
     private final BookmarkRepository bookmarkRepository;
     private final HotPostService hotPostService;
+    private final NotificationService notificationService;
 
 
 
@@ -69,6 +70,9 @@ public class PostActionService {
             
             // HOT 점수 업데이트
             hotPostService.updatePostHotScore(postId);
+
+            // 좋아요 알림 생성
+            notificationService.sendLikeNotification(post.getUser(), user, "post", postId);
 
             log.info("게시글 좋아요 완료 - 게시글: {}, 사용자: {}", postId, username);
             
