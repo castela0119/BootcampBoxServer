@@ -15,6 +15,7 @@ import io.jsonwebtoken.JwtException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.hibernate.PropertyValueException;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;

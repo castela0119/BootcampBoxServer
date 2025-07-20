@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -20,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 public class CommentController {
 
     private final CommentService commentService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @PostMapping("/{postId}/comments")
     public ResponseEntity<CommentDto.CommentResponse> createComment(
@@ -66,6 +71,11 @@ public class CommentController {
             
             log.info("댓글 수정 요청 - 댓글: {}, 사용자: {}", commentId, username);
             CommentDto.CommentResponse response = commentService.updateComment(commentId, request, username);
+            
+            // 영속성 컨텍스트 정리
+            entityManager.flush();
+            entityManager.clear();
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("댓글 수정 오류: ", e);
@@ -81,6 +91,11 @@ public class CommentController {
             
             log.info("댓글 삭제 요청 - 댓글: {}, 사용자: {}", commentId, username);
             CommentDto.SimpleResponse response = commentService.deleteComment(commentId, username);
+            
+            // 영속성 컨텍스트 정리
+            entityManager.flush();
+            entityManager.clear();
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("댓글 삭제 오류: ", e);

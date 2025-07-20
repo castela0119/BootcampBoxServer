@@ -17,6 +17,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +36,9 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CommentReportRepository commentReportRepository;
     private final HotPostService hotPostService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public CommentDto.CommentResponse createComment(Long postId, CommentDto.CreateCommentRequest request, String username) {
         // 게시글 존재 확인
@@ -122,23 +128,31 @@ public class CommentService {
 
     public CommentDto.CommentResponse updateComment(Long commentId, CommentDto.UpdateCommentRequest request, String username) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
 
         // 작성자 확인
         if (!comment.getAuthorUsername().equals(username)) {
             throw new IllegalArgumentException("댓글을 수정할 권한이 없습니다.");
         }
 
+        // 수정 전 영속성 컨텍스트에서 분리
+        entityManager.detach(comment);
+
         comment.setContent(request.getContent());
         comment.setUpdatedAt(LocalDateTime.now());
 
         Comment updatedComment = commentRepository.save(comment);
+        
+        // 수정 후 영속성 컨텍스트 정리
+        entityManager.flush();
+        entityManager.clear();
+        
         return CommentDto.CommentResponse.from(updatedComment, comment.getUser().getId());
     }
 
     public CommentDto.SimpleResponse deleteComment(Long commentId, String username) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
 
         // 작성자 확인
         if (!comment.getAuthorUsername().equals(username)) {
@@ -151,7 +165,15 @@ public class CommentService {
             throw new IllegalArgumentException("대댓글이 있는 댓글은 삭제할 수 없습니다.");
         }
 
+        // 삭제 전 영속성 컨텍스트에서 분리
+        entityManager.detach(comment);
+
+        // 삭제 실행
         commentRepository.delete(comment);
+        
+        // 삭제 후 영속성 컨텍스트 정리
+        entityManager.flush();
+        entityManager.clear();
         
         // HOT 점수 업데이트
         hotPostService.updatePostHotScore(comment.getPost().getId());
