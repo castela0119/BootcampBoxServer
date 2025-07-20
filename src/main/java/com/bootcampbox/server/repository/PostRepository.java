@@ -95,4 +95,32 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     Page<Post> findAllByOrderByLikeCountDesc(Pageable pageable);
     Page<Post> findAllByOrderByViewCountDesc(Pageable pageable);
     Page<Post> findAllByOrderByCommentCountDesc(Pageable pageable);
+    
+    // HOT 게시글 관련 메서드들
+    @Query("SELECT p FROM Post p WHERE p.isHot = true ORDER BY p.hotScore DESC, p.createdAt DESC")
+    Page<Post> findHotPostsOrderByHotScoreDesc(Pageable pageable);
+    
+    @Query("SELECT p FROM Post p WHERE p.isHot = true AND p.createdAt >= :startDate ORDER BY p.hotScore DESC, p.createdAt DESC")
+    Page<Post> findHotPostsByPeriodOrderByHotScoreDesc(@Param("startDate") LocalDateTime startDate, Pageable pageable);
+    
+    // 최근 7일 내 게시글 조회 (배치 작업용)
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :startDate ORDER BY p.createdAt DESC")
+    Page<Post> findRecentPostsForBatch(@Param("startDate") LocalDateTime startDate, Pageable pageable);
+    
+    // 오래된 HOT 게시글 조회 (7일 이상)
+    @Query("SELECT p FROM Post p WHERE p.isHot = true AND p.createdAt < :cutoffDate")
+    List<Post> findOldHotPosts(@Param("cutoffDate") LocalDateTime cutoffDate);
+    
+    // HOT 게시글 통계
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.isHot = true")
+    long countHotPosts();
+    
+    @Query("SELECT COUNT(p) FROM Post p WHERE p.isHot = true AND p.createdAt >= :startDate")
+    long countHotPostsByPeriod(@Param("startDate") LocalDateTime startDate);
+    
+    @Query("SELECT AVG(p.hotScore) FROM Post p WHERE p.isHot = true")
+    Double getAverageHotScore();
+    
+    @Query("SELECT AVG(p.hotScore) FROM Post p WHERE p.isHot = true AND p.createdAt >= :startDate")
+    Double getAverageHotScoreByPeriod(@Param("startDate") LocalDateTime startDate);
 } 

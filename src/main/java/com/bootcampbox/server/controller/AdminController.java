@@ -1,17 +1,22 @@
 package com.bootcampbox.server.controller;
 
 import com.bootcampbox.server.dto.AdminDto;
+import com.bootcampbox.server.dto.HotPostDto;
 import com.bootcampbox.server.service.AdminService;
+import com.bootcampbox.server.service.HotPostService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminController {
 
     private final AdminService adminService;
+    private final HotPostService hotPostService;
 
     // === 대시보드 ===
     @GetMapping("/dashboard")
@@ -134,5 +139,34 @@ public class AdminController {
     public ResponseEntity<AdminDto.SimpleResponse> deleteProduct(@PathVariable Long productId) {
         AdminDto.SimpleResponse response = adminService.deleteProduct(productId);
         return ResponseEntity.ok(response);
+    }
+
+    // === HOT 게시글 관리 ===
+    @GetMapping("/hot-stats")
+    public ResponseEntity<HotPostDto.HotStatsResponse> getHotStats() {
+        try {
+            log.info("HOT 게시글 통계 조회 요청");
+            HotPostDto.HotStatsResponse response = hotPostService.getHotStats();
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("HOT 게시글 통계 조회 오류: ", e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/posts/{postId}/hot-score")
+    public ResponseEntity<HotPostDto.HotScoreAdjustResponse> adjustHotScore(
+            @PathVariable Long postId,
+            @RequestBody HotPostDto.HotScoreAdjustRequest request) {
+        try {
+            log.info("HOT 점수 수동 조정 요청 - 게시글: {}, 새 점수: {}", postId, request.getHotScore());
+            HotPostDto.HotScoreAdjustResponse response = hotPostService.adjustHotScore(postId, request.getHotScore());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("HOT 점수 수동 조정 오류: ", e);
+            return ResponseEntity.badRequest().body(
+                new HotPostDto.HotScoreAdjustResponse("HOT 점수 조정 실패: " + e.getMessage(), 0, 0, false, false)
+            );
+        }
     }
 } 

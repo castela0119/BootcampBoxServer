@@ -33,6 +33,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final BookmarkRepository bookmarkRepository;
     private final TagService tagService;
+    private final HotPostService hotPostService;
 
     public PostDto.Response createPost(String username, PostDto.CreateRequest request) {
         User user = userRepository.findByUsername(username)
@@ -64,6 +65,10 @@ public class PostService {
         }
 
         Post savedPost = postRepository.save(post);
+        
+        // HOT 점수 초기화
+        hotPostService.initializePostHotScore(savedPost);
+        
         return PostDto.Response.from(savedPost);
     }
 

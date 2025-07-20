@@ -32,6 +32,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentReportRepository commentReportRepository;
+    private final HotPostService hotPostService;
 
     public CommentDto.CommentResponse createComment(Long postId, CommentDto.CreateCommentRequest request, String username) {
         // 게시글 존재 확인
@@ -61,6 +62,10 @@ public class CommentService {
         }
 
         Comment savedComment = commentRepository.save(comment);
+        
+        // HOT 점수 업데이트
+        hotPostService.updatePostHotScore(postId);
+        
         return CommentDto.CommentResponse.from(savedComment, user.getId());
     }
 
@@ -147,6 +152,10 @@ public class CommentService {
         }
 
         commentRepository.delete(comment);
+        
+        // HOT 점수 업데이트
+        hotPostService.updatePostHotScore(comment.getPost().getId());
+        
         return new CommentDto.SimpleResponse("댓글이 성공적으로 삭제되었습니다.", true);
     }
 

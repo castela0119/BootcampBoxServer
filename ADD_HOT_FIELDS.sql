@@ -1,0 +1,9 @@
+-- Post 테이블에 HOT 관련 필드 추가
+
+-- HOT 관련 필드 추가
+ALTER TABLE posts ADD COLUMN hot_score INT DEFAULT 0;
+ALTER TABLE posts ADD COLUMN is_hot BOOLEAN DEFAULT FALSE;
+ALTER TABLE posts ADD COLUMN hot_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- 필드 추가 확인
+DESCRIBE posts; 

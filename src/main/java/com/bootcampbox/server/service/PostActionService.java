@@ -21,6 +21,7 @@ public class PostActionService {
     private final PostLikeRepository postLikeRepository;
     private final PostReportRepository postReportRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final HotPostService hotPostService;
 
 
 
@@ -43,6 +44,9 @@ public class PostActionService {
             postLikeRepository.delete(postLike);
             post.setLikeCount(Math.max(0, post.getLikeCount() - 1));
             postRepository.save(post);
+            
+            // HOT 점수 업데이트
+            hotPostService.updatePostHotScore(postId);
 
             log.info("게시글 좋아요 취소 완료 - 게시글: {}, 사용자: {}", postId, username);
             
@@ -62,6 +66,9 @@ public class PostActionService {
 
             post.setLikeCount(post.getLikeCount() + 1);
             postRepository.save(post);
+            
+            // HOT 점수 업데이트
+            hotPostService.updatePostHotScore(postId);
 
             log.info("게시글 좋아요 완료 - 게시글: {}, 사용자: {}", postId, username);
             

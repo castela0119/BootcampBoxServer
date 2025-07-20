@@ -70,6 +70,16 @@ public class Post {
     )
     private Set<Tag> tags = new HashSet<>();
     
+    // HOT 관련 필드
+    @Column(name = "hot_score")
+    private int hotScore = 0; // HOT 점수
+    
+    @Column(name = "is_hot")
+    private boolean isHot = false; // HOT 게시글 여부
+    
+    @Column(name = "hot_updated_at")
+    private LocalDateTime hotUpdatedAt = LocalDateTime.now(); // HOT 점수 마지막 업데이트 시간
+    
     // 댓글 수 계산 메서드 (DB 컬럼 우선, 없으면 실시간 계산)
     public int getCommentCount() {
         return commentCount > 0 ? commentCount : comments.size();
@@ -78,6 +88,41 @@ public class Post {
     // 댓글 수 업데이트 메서드
     public void updateCommentCount() {
         this.commentCount = comments.size();
+    }
+    
+    // HOT 점수 계산 메서드
+    public int calculateHotScore() {
+        // 좋아요 × 3 + 댓글수 × 2 + 시간가중치
+        int likeScore = likeCount * 3;
+        int commentScore = getCommentCount() * 2;
+        int timeScore = calculateTimeScore();
+        
+        return likeScore + commentScore + timeScore;
+    }
+    
+    // 시간 가중치 계산 메서드
+    private int calculateTimeScore() {
+        long daysSinceCreation = java.time.Duration.between(createdAt, LocalDateTime.now()).toDays();
+        
+        if (daysSinceCreation == 0) return 50;      // 오늘 작성
+        if (daysSinceCreation == 1) return 30;      // 어제 작성
+        if (daysSinceCreation == 2) return 20;      // 2일 전 작성
+        if (daysSinceCreation == 3) return 10;      // 3일 전 작성
+        if (daysSinceCreation <= 5) return 5;       // 4-5일 전 작성
+        return 0;                                    // 6일 이후
+    }
+    
+    // HOT 점수 업데이트 메서드
+    public void updateHotScore() {
+        int newHotScore = calculateHotScore();
+        this.hotScore = newHotScore;
+        this.hotUpdatedAt = LocalDateTime.now();
+        
+        // HOT 게시글 선정 기준: 80점 이상
+        boolean shouldBeHot = newHotScore >= 80;
+        if (this.isHot != shouldBeHot) {
+            this.isHot = shouldBeHot;
+        }
     }
     
     // 익명 게시글인지 확인하는 메서드
