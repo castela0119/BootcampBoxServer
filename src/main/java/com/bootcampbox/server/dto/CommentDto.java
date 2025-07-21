@@ -137,10 +137,40 @@ public class CommentDto {
     public static class SimpleResponse {
         private String message;
         private boolean success;
-
+        
         public SimpleResponse(String message, boolean success) {
             this.message = message;
             this.success = success;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class CommentAuthorsResponse {
+        private String message;
+        private List<CommentAuthorInfo> authors;
+        private boolean success;
+        
+        public CommentAuthorsResponse(String message, List<CommentAuthorInfo> authors, boolean success) {
+            this.message = message;
+            this.authors = authors;
+            this.success = success;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class CommentAuthorInfo {
+        private Long id;
+        private String username;
+        private String nickname;
+        private LocalDateTime firstCommentAt; // 해당 게시글에 첫 댓글을 단 시간
+        
+        public CommentAuthorInfo(Long id, String username, String nickname, LocalDateTime firstCommentAt) {
+            this.id = id;
+            this.username = username;
+            this.nickname = nickname;
+            this.firstCommentAt = firstCommentAt;
         }
     }
 } 

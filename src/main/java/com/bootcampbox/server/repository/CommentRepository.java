@@ -1,6 +1,7 @@
 package com.bootcampbox.server.repository;
 
 import com.bootcampbox.server.domain.Comment;
+import com.bootcampbox.server.domain.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,6 +34,21 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     // 댓글 작성자 확인
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Comment c WHERE c.id = :commentId AND c.user.username = :username")
     boolean existsByIdAndUsername(@Param("commentId") Long commentId, @Param("username") String username);
+    
+    // 해당 게시글에 댓글을 단 사용자들 조회 (중복 제거)
+    @Query("SELECT DISTINCT c.user FROM Comment c WHERE c.post.id = :postId")
+    List<User> findDistinctUsersByPostId(@Param("postId") Long postId);
+    
+    // 해당 게시글에 댓글을 단 사용자 ID들 조회 (중복 제거)
+    @Query("SELECT DISTINCT c.user.id FROM Comment c WHERE c.post.id = :postId")
+    List<Long> findDistinctUserIdsByPostId(@Param("postId") Long postId);
+    
+    // 해당 게시글에 댓글을 단 사용자들과 첫 댓글 시간 조회
+    @Query("SELECT c.user.id, c.user.username, c.user.nickname, MIN(c.createdAt) as firstCommentAt " +
+           "FROM Comment c WHERE c.post.id = :postId " +
+           "GROUP BY c.user.id, c.user.username, c.user.nickname " +
+           "ORDER BY firstCommentAt ASC")
+    List<Object[]> findCommentAuthorsWithFirstCommentTime(@Param("postId") Long postId);
     
     // 관리자 기능을 위한 메서드들
     Page<Comment> findByContentContaining(String content, Pageable pageable);

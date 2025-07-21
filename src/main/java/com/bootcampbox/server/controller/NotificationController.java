@@ -2,6 +2,7 @@ package com.bootcampbox.server.controller;
 
 import com.bootcampbox.server.dto.NotificationDto;
 import com.bootcampbox.server.service.NotificationService;
+import com.bootcampbox.server.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class NotificationController {
     private final NotificationService notificationService;
+    private final WebSocketService webSocketService;
 
     // 알림 목록 조회 (페이징)
     @GetMapping
@@ -48,6 +50,10 @@ public class NotificationController {
         log.info("알림 읽음 처리 요청: {}, 알림 ID: {}", username, id);
         
         NotificationDto.SimpleResponse response = notificationService.markAsRead(username, id);
+        
+        // WebSocket으로 읽지 않은 알림 개수 업데이트 전송
+        webSocketService.sendUnreadCountToUser(username);
+        
         return ResponseEntity.ok(response);
     }
 
@@ -59,6 +65,10 @@ public class NotificationController {
         log.info("모든 알림 읽음 처리 요청: {}", username);
         
         NotificationDto.SimpleResponse response = notificationService.markAllAsRead(username);
+        
+        // WebSocket으로 읽지 않은 알림 개수 업데이트 전송
+        webSocketService.sendUnreadCountToUser(username);
+        
         return ResponseEntity.ok(response);
     }
 

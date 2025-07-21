@@ -3,7 +3,7 @@
 ## 📋 API 개요
 
 ### 기본 정보
-- **Base URL**: `http://localhost:8080/api`
+- **Base URL**: `http://localhost:8080`
 - **Content-Type**: `application/json`
 - **인증**: Bearer Token (JWT)
 

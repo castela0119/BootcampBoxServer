@@ -24,6 +24,7 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +38,7 @@ public class CommentService {
     private final CommentReportRepository commentReportRepository;
     private final HotPostService hotPostService;
     private final NotificationService notificationService;
+    private final WebSocketService webSocketService;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -77,8 +79,22 @@ public class CommentService {
         // HOT 점수 업데이트
         hotPostService.updatePostHotScore(postId);
         
-        // 댓글 알림 생성 (게시글 작성자에게)
-        notificationService.sendCommentNotification(post.getUser(), user, postId);
+        // 댓글 알림 생성 및 WebSocket 전송 (게시글 작성자 + 기존 댓글 작성자들에게)
+        List<User> recipients = new ArrayList<>();
+        recipients.add(post.getUser()); // 게시글 작성자 추가
+        
+        // 해당 게시글에 댓글을 단 다른 사용자들 추가
+        List<User> commentUsers = commentRepository.findDistinctUsersByPostId(postId);
+        for (User commentUser : commentUsers) {
+            // 게시글 작성자와 중복되지 않고, 댓글 작성자 본인이 아닌 경우만 추가
+            if (!commentUser.getId().equals(post.getUser().getId()) && 
+                !commentUser.getId().equals(user.getId())) {
+                recipients.add(commentUser);
+            }
+        }
+        
+        // 알림 전송
+        webSocketService.sendCommentNotificationToAll(user, postId, recipients);
         
         return CommentDto.CommentResponse.from(savedComment, user.getId());
     }
@@ -290,6 +306,33 @@ public class CommentService {
     // Comment ID로 Comment 엔티티 조회 (내부용)
     public Comment getCommentEntity(Long commentId) {
         return commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다: " + commentId));
+                .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+    }
+
+    // 게시글의 댓글 작성자들 조회
+    public CommentDto.CommentAuthorsResponse getCommentAuthors(Long postId) {
+        // 게시글 존재 확인
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        
+        // 댓글 작성자들과 첫 댓글 시간 조회
+        List<Object[]> results = commentRepository.findCommentAuthorsWithFirstCommentTime(postId);
+        
+        List<CommentDto.CommentAuthorInfo> authors = results.stream()
+                .map(result -> {
+                    Long userId = (Long) result[0];
+                    String username = (String) result[1];
+                    String nickname = (String) result[2];
+                    LocalDateTime firstCommentAt = (LocalDateTime) result[3];
+                    
+                    return new CommentDto.CommentAuthorInfo(userId, username, nickname, firstCommentAt);
+                })
+                .collect(Collectors.toList());
+        
+        return new CommentDto.CommentAuthorsResponse(
+                "댓글 작성자 조회 완료", 
+                authors, 
+                true
+        );
     }
 } 

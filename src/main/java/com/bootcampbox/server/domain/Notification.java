@@ -47,13 +47,24 @@ public class Notification {
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     // 알림 생성 팩토리 메서드들
-    public static Notification createCommentNotification(User recipient, User sender, Long postId) {
+    public static Notification createCommentNotification(User recipient, User sender, Long postId, Long postAuthorId, String postTitle) {
         Notification notification = new Notification();
         notification.setUser(recipient);
         notification.setSender(sender);
         notification.setType("comment");
         notification.setTitle("새 댓글");
-        notification.setContent(sender.getNickname() + "님이 회원님의 게시글에 댓글을 남겼습니다.");
+        
+        // 수신자가 게시글 작성자인지 확인하여 다른 메시지 표시
+        String notificationContent;
+        if (recipient.getId().equals(postAuthorId)) {
+            // 수신자가 게시글 작성자인 경우
+            notificationContent = sender.getNickname() + "님이 회원님의 게시글에 댓글을 남겼습니다.";
+        } else {
+            // 수신자가 게시글 작성자가 아닌 경우 (다른 댓글 작성자)
+            notificationContent = sender.getNickname() + "님이 [" + postTitle + "]에 댓글을 남겼습니다.";
+        }
+        
+        notification.setContent(notificationContent);
         notification.setTargetType("post");
         notification.setTargetId(postId);
         notification.setRead(false);

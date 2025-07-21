@@ -122,6 +122,21 @@ public class CommentController {
         }
     }
 
+    // 게시글의 댓글 작성자들 조회
+    @GetMapping("/{postId}/comment-authors")
+    public ResponseEntity<CommentDto.CommentAuthorsResponse> getCommentAuthors(@PathVariable Long postId) {
+        try {
+            log.info("게시글 댓글 작성자 조회 요청 - 게시글: {}", postId);
+            CommentDto.CommentAuthorsResponse response = commentService.getCommentAuthors(postId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 댓글 작성자 조회 오류: ", e);
+            return ResponseEntity.badRequest().body(
+                new CommentDto.CommentAuthorsResponse("댓글 작성자 조회 실패: " + e.getMessage(), null, false)
+            );
+        }
+    }
+
     @GetMapping("/comments/{commentId}/likes")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommentActionDto.UserListResponse> getCommentLikes(@PathVariable Long commentId) {

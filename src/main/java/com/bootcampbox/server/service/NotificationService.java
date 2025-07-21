@@ -1,9 +1,11 @@
 package com.bootcampbox.server.service;
 
 import com.bootcampbox.server.domain.Notification;
+import com.bootcampbox.server.domain.Post;
 import com.bootcampbox.server.domain.User;
 import com.bootcampbox.server.dto.NotificationDto;
 import com.bootcampbox.server.repository.NotificationRepository;
+import com.bootcampbox.server.repository.PostRepository;
 import com.bootcampbox.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ import java.util.List;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
     private final NotificationSettingsService settingsService;
     private final PostMuteService postMuteService;
 
@@ -103,7 +106,12 @@ public class NotificationService {
                 return;
             }
             
-            Notification notification = Notification.createCommentNotification(recipient, sender, postId);
+            // 게시글 정보 조회
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+            
+            Notification notification = Notification.createCommentNotification(
+                recipient, sender, postId, post.getUser().getId(), post.getTitle());
             notificationRepository.save(notification);
             
             log.info("댓글 알림 생성 - 수신자: {}, 발신자: {}, 게시글: {}", 
@@ -199,5 +207,11 @@ public class NotificationService {
         
         sendSystemNotification(user, "테스트 알림", "이것은 테스트 알림입니다.");
         return new NotificationDto.SimpleResponse("테스트 알림을 발송했습니다.", true);
+    }
+
+    // 알림 엔티티 조회
+    public Notification getNotificationEntity(Long notificationId) {
+        return notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
     }
 } 
