@@ -19,6 +19,9 @@ public class Category {
     @Column(nullable = false, unique = true)
     private String name; // 카테고리명 (예: 자유게시판, 익명게시판)
 
+    @Column(name = "english_name")
+    private String englishName; // 영문 카테고리명 (예: community, career)
+
     @Column(name = "is_anonymous", nullable = false)
     private boolean isAnonymous = false; // 익명 여부
 

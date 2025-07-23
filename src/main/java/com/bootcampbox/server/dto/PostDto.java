@@ -27,14 +27,16 @@ public class PostDto {
         private List<String> tagNames; // 태그명 목록
         private boolean isAnonymous = false; // 익명 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
+        private Long categoryId; // 카테고리 ID
 
         @Builder
-        public CreateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType) {
+        public CreateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId) {
             this.title = title;
             this.content = content;
             this.tagNames = tagNames;
             this.isAnonymous = isAnonymous;
             this.authorUserType = authorUserType;
+            this.categoryId = categoryId;
         }
     }
 
@@ -50,14 +52,16 @@ public class PostDto {
         private List<String> tagNames; // 태그명 목록
         private boolean isAnonymous = false; // 익명 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
+        private Long categoryId; // 카테고리 ID
 
         @Builder
-        public UpdateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType) {
+        public UpdateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId) {
             this.title = title;
             this.content = content;
             this.tagNames = tagNames;
             this.isAnonymous = isAnonymous;
             this.authorUserType = authorUserType;
+            this.categoryId = categoryId;
         }
     }
 
@@ -80,6 +84,10 @@ public class PostDto {
         private boolean canBeDeleted; // 삭제 가능 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
         private List<String> tagNames; // 태그명 목록
+        
+        // 카테고리 관련 필드
+        private Long categoryId; // 카테고리 ID
+        private String categoryName; // 카테고리명
         
         // 좋아요 관련 필드
         private int likeCount; // 좋아요 수
@@ -115,6 +123,8 @@ public class PostDto {
                     .canBeDeleted(post.canBeDeleted())
                     .authorUserType(post.getAuthorUserType()) // 작성 당시 신분 type
                     .tagNames(tagNames)
+                    .categoryId(post.getCategory() != null ? post.getCategory().getId() : null)
+                    .categoryName(post.getCategory() != null ? post.getCategory().getName() : null)
                     .likeCount(post.getLikeCount())
                     .isLiked(isLiked)
                     .isBookmarked(isBookmarked)

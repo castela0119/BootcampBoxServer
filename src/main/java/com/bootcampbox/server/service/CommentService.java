@@ -79,11 +79,15 @@ public class CommentService {
         // HOT 점수 업데이트
         hotPostService.updatePostHotScore(postId);
         
-        // 댓글 알림 생성 및 WebSocket 전송 (게시글 작성자 + 기존 댓글 작성자들에게)
+        // 댓글 알림 생성 및 WebSocket 전송 (중복 방지 로직 포함)
         List<User> recipients = new ArrayList<>();
-        recipients.add(post.getUser()); // 게시글 작성자 추가
         
-        // 해당 게시글에 댓글을 단 다른 사용자들 추가
+        // 1. 게시글 작성자 추가 (자신이 아닌 경우만)
+        if (!post.getUser().getId().equals(user.getId())) {
+            recipients.add(post.getUser());
+        }
+        
+        // 2. 해당 게시글에 댓글을 단 다른 사용자들 추가 (중복 방지)
         List<User> commentUsers = commentRepository.findDistinctUsersByPostId(postId);
         for (User commentUser : commentUsers) {
             // 게시글 작성자와 중복되지 않고, 댓글 작성자 본인이 아닌 경우만 추가
@@ -93,7 +97,21 @@ public class CommentService {
             }
         }
         
-        // 알림 전송
+        // 3. 대댓글인 경우 부모 댓글 작성자도 추가
+        if (request.getParentId() != null) {
+            Comment parentComment = commentRepository.findById(request.getParentId()).orElse(null);
+            if (parentComment != null && !parentComment.getUser().getId().equals(user.getId())) {
+                // 부모 댓글 작성자가 이미 recipients에 있는지 확인
+                boolean alreadyIncluded = recipients.stream()
+                    .anyMatch(recipient -> recipient.getId().equals(parentComment.getUser().getId()));
+                
+                if (!alreadyIncluded) {
+                    recipients.add(parentComment.getUser());
+                }
+            }
+        }
+        
+        // 알림 전송 (중복 방지 로직이 WebSocketService 내부에서 처리됨)
         webSocketService.sendCommentNotificationToAll(user, postId, recipients);
         
         return CommentDto.CommentResponse.from(savedComment, user.getId());

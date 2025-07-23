@@ -1,9 +1,11 @@
 package com.bootcampbox.server.service;
 
 import com.bootcampbox.server.domain.Notification;
+import com.bootcampbox.server.domain.NotificationHistory;
 import com.bootcampbox.server.domain.Post;
 import com.bootcampbox.server.domain.User;
 import com.bootcampbox.server.dto.NotificationDto;
+import com.bootcampbox.server.repository.NotificationHistoryRepository;
 import com.bootcampbox.server.repository.NotificationRepository;
 import com.bootcampbox.server.repository.PostRepository;
 import com.bootcampbox.server.repository.UserRepository;
@@ -23,6 +25,7 @@ import java.util.List;
 @Slf4j
 public class NotificationService {
     private final NotificationRepository notificationRepository;
+    private final NotificationHistoryRepository notificationHistoryRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final NotificationSettingsService settingsService;
@@ -85,12 +88,13 @@ public class NotificationService {
         return new NotificationDto.SimpleResponse("알림을 삭제했습니다.", true);
     }
 
-    // 댓글 알림 생성
+    // 댓글 알림 생성 (중복 방지 포함)
     @Transactional
     public void sendCommentNotification(User recipient, User sender, Long postId) {
         try {
             // 자신의 게시글에 댓글을 달면 알림을 보내지 않음
             if (recipient.getId().equals(sender.getId())) {
+                log.info("자신의 게시글 댓글 알림 차단 - 사용자: {}", sender.getUsername());
                 return;
             }
             
@@ -106,27 +110,44 @@ public class NotificationService {
                 return;
             }
             
+            // 중복 알림 방지: 24시간 내에 같은 사용자-게시글 조합으로 댓글 알림 발송 여부 확인
+            LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
+            boolean hasRecentNotification = notificationHistoryRepository.existsCommentHistoryWithinTime(
+                recipient.getId(), sender.getId(), postId, twentyFourHoursAgo);
+            
+            if (hasRecentNotification) {
+                log.info("중복 댓글 알림 차단 - 수신자: {}, 발신자: {}, 게시글: {} (24시간 내 이미 발송됨)", 
+                        recipient.getUsername(), sender.getUsername(), postId);
+                return;
+            }
+            
             // 게시글 정보 조회
             Post post = postRepository.findById(postId)
                     .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
             
+            // 알림 생성 및 저장
             Notification notification = Notification.createCommentNotification(
                 recipient, sender, postId, post.getUser().getId(), post.getTitle());
             notificationRepository.save(notification);
             
-            log.info("댓글 알림 생성 - 수신자: {}, 발신자: {}, 게시글: {}", 
+            // 알림 발송 이력 저장
+            var history = NotificationHistory.createCommentHistory(recipient, sender, postId);
+            notificationHistoryRepository.save(history);
+            
+            log.info("댓글 알림 생성 완료 - 수신자: {}, 발신자: {}, 게시글: {}", 
                     recipient.getUsername(), sender.getUsername(), postId);
         } catch (Exception e) {
             log.error("댓글 알림 생성 실패: ", e);
         }
     }
 
-    // 좋아요 알림 생성
+    // 좋아요 알림 생성 (중복 방지 포함)
     @Transactional
     public void sendLikeNotification(User recipient, User sender, String targetType, Long targetId) {
         try {
             // 자신의 게시글/댓글에 좋아요를 누르면 알림을 보내지 않음
             if (recipient.getId().equals(sender.getId())) {
+                log.info("자신의 {} 좋아요 알림 차단 - 사용자: {}", targetType, sender.getUsername());
                 return;
             }
             
@@ -142,10 +163,42 @@ public class NotificationService {
                 return;
             }
             
+            // 중복 알림 방지: 24시간 내에 같은 사용자-대상 조합으로 알림 발송 여부 확인
+            LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
+            boolean hasRecentNotification;
+            
+            if ("post".equals(targetType)) {
+                hasRecentNotification = notificationHistoryRepository.existsLikeHistoryWithinTime(
+                    recipient.getId(), sender.getId(), targetId, twentyFourHoursAgo);
+            } else if ("comment".equals(targetType)) {
+                hasRecentNotification = notificationHistoryRepository.existsCommentLikeHistoryWithinTime(
+                    recipient.getId(), sender.getId(), targetId, twentyFourHoursAgo);
+            } else {
+                hasRecentNotification = false;
+            }
+            
+            if (hasRecentNotification) {
+                log.info("중복 좋아요 알림 차단 - 수신자: {}, 발신자: {}, 대상: {}:{} (24시간 내 이미 발송됨)", 
+                        recipient.getUsername(), sender.getUsername(), targetType, targetId);
+                return;
+            }
+            
+            // 알림 생성 및 저장
             Notification notification = Notification.createLikeNotification(recipient, sender, targetType, targetId);
             notificationRepository.save(notification);
             
-            log.info("좋아요 알림 생성 - 수신자: {}, 발신자: {}, 대상: {}:{}", 
+            // 알림 발송 이력 저장
+            NotificationHistory history;
+            if ("post".equals(targetType)) {
+                history = NotificationHistory.createLikeHistory(recipient, sender, targetId);
+            } else if ("comment".equals(targetType)) {
+                history = NotificationHistory.createCommentLikeHistory(recipient, sender, targetId);
+            } else {
+                history = NotificationHistory.createLikeHistory(recipient, sender, targetId);
+            }
+            notificationHistoryRepository.save(history);
+            
+            log.info("좋아요 알림 생성 완료 - 수신자: {}, 발신자: {}, 대상: {}:{}", 
                     recipient.getUsername(), sender.getUsername(), targetType, targetId);
         } catch (Exception e) {
             log.error("좋아요 알림 생성 실패: ", e);
@@ -193,7 +246,10 @@ public class NotificationService {
             LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
             notificationRepository.deleteOldNotifications(cutoffDate);
             
-            log.info("오래된 알림 정리 완료 - 기준일: {}", cutoffDate);
+            // 오래된 알림 이력도 함께 정리
+            notificationHistoryRepository.deleteOldHistory(cutoffDate);
+            
+            log.info("오래된 알림 및 이력 정리 완료 - 기준일: {}", cutoffDate);
         } catch (Exception e) {
             log.error("오래된 알림 정리 실패: ", e);
         }

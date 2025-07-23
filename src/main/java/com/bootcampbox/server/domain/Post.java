@@ -23,6 +23,9 @@ public class Post {
     @ManyToOne @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne @JoinColumn(name = "category_id")
+    private Category category;
+
     private String title;
 
     @Column(columnDefinition = "TEXT")

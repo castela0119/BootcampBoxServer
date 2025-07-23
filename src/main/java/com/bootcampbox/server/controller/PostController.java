@@ -141,4 +141,99 @@ public class PostController {
         Page<PostDto.Response> response = postService.searchPostsByKeyword(keyword, pageable);
         return ResponseEntity.ok(response);
     }
+
+    // ===== 카테고리별 게시글 API =====
+
+    // 커뮤니티 탭 게시판 (기존 게시글들이 여기로 분류됨)
+    @GetMapping("/community")
+    public ResponseEntity<Page<PostDto.Response>> getCommunityPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("커뮤니티 게시판 조회 요청: page={}, size={}, sortBy={}, sortOrder={}", 
+                page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategory("커뮤니티 탭 게시판", page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 진로 상담 게시판
+    @GetMapping("/career")
+    public ResponseEntity<Page<PostDto.Response>> getCareerPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("진로 상담 게시판 조회 요청: page={}, size={}, sortBy={}, sortOrder={}", 
+                page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategory("진로 상담", page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 연애 상담 게시판
+    @GetMapping("/love")
+    public ResponseEntity<Page<PostDto.Response>> getLovePosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("연애 상담 게시판 조회 요청: page={}, size={}, sortBy={}, sortOrder={}", 
+                page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategory("연애 상담", page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 사건 사고 게시판
+    @GetMapping("/incident")
+    public ResponseEntity<Page<PostDto.Response>> getIncidentPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("사건 사고 게시판 조회 요청: page={}, size={}, sortBy={}, sortOrder={}", 
+                page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategory("사건 사고", page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 휴가 어때 게시판
+    @GetMapping("/vacation")
+    public ResponseEntity<Page<PostDto.Response>> getVacationPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("휴가 어때 게시판 조회 요청: page={}, size={}, sortBy={}, sortOrder={}", 
+                page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategory("휴가 어때", page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 카테고리별 게시글 조회 (범용 API)
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<Page<PostDto.Response>> getPostsByCategoryId(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("카테고리별 게시글 조회 요청: categoryId={}, page={}, size={}, sortBy={}, sortOrder={}", 
+                categoryId, page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByCategoryId(categoryId, page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
+
+    // 영문 카테고리명으로 게시글 조회 (범용 API)
+    @GetMapping("/category/english/{englishName}")
+    public ResponseEntity<Page<PostDto.Response>> getPostsByEnglishCategoryName(
+            @PathVariable String englishName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder) {
+        log.info("영문 카테고리별 게시글 조회 요청: englishName={}, page={}, size={}, sortBy={}, sortOrder={}", 
+                englishName, page, size, sortBy, sortOrder);
+        Page<PostDto.Response> response = postService.getPostsByEnglishCategoryName(englishName, page, size, sortBy, sortOrder);
+        return ResponseEntity.ok(response);
+    }
 } 

@@ -36,8 +36,7 @@
 - [x] GET /api/posts/{postId} : 게시글 상세
 - [x] PUT /api/posts/{postId} : 게시글 수정
 - [x] DELETE /api/posts/{postId} : 게시글 삭제
-- [x] POST /api/posts/{postId}/like : 게시글 좋아요
-- [x] DELETE /api/posts/{postId}/like : 게시글 좋아요 취소
+- [x] POST /api/posts/{postId}/toggle-like : 게시글 좋아요 토글 (알림 포함)
 - [x] POST /api/posts/{postId}/report : 게시글 신고
 - [x] POST /api/posts/{postId}/bookmark : 게시글 북마크
 - [x] DELETE /api/posts/{postId}/bookmark : 게시글 북마크 취소

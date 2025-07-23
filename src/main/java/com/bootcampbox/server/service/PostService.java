@@ -1,5 +1,6 @@
 package com.bootcampbox.server.service;
 
+import com.bootcampbox.server.domain.Category;
 import com.bootcampbox.server.domain.Post;
 import com.bootcampbox.server.domain.Tag;
 import com.bootcampbox.server.domain.User;
@@ -22,10 +23,12 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import com.bootcampbox.server.dto.PostSearchCondition;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class PostService {
 
     private final PostRepository postRepository;
@@ -34,6 +37,7 @@ public class PostService {
     private final BookmarkRepository bookmarkRepository;
     private final TagService tagService;
     private final HotPostService hotPostService;
+    private final CategoryService categoryService;
 
     public PostDto.Response createPost(String username, PostDto.CreateRequest request) {
         User user = userRepository.findByUsername(username)
@@ -54,6 +58,16 @@ public class PostService {
         post.setAnonymous(request.isAnonymous());
         if (request.isAnonymous()) {
             post.setAnonymousNickname("익명");
+        }
+
+        // 카테고리 설정
+        if (request.getCategoryId() != null) {
+            Category category = categoryService.getCategoryEntity(request.getCategoryId());
+            post.setCategory(category);
+        } else {
+            // 카테고리가 지정되지 않은 경우 기본 카테고리(커뮤니티 탭 게시판)로 설정
+            Category defaultCategory = categoryService.getCategoryByName("커뮤니티 탭 게시판");
+            post.setCategory(defaultCategory);
         }
 
         // 태그 처리
@@ -242,5 +256,79 @@ public class PostService {
         }
         
         return PageRequest.of(page, size, sort);
+    }
+
+    // ===== 카테고리별 게시글 조회 메서드 =====
+
+    // 카테고리명으로 게시글 조회
+    public Page<PostDto.Response> getPostsByCategory(String categoryName, int page, int size, String sortBy, String sortOrder) {
+        log.info("=== 카테고리별 게시글 조회 시작 ===");
+        log.info("카테고리명: {}", categoryName);
+        log.info("페이지: {}, 크기: {}, 정렬: {}, 순서: {}", page, size, sortBy, sortOrder);
+        
+        Pageable pageable = createPageable(page, size, sortBy, sortOrder);
+        log.info("Pageable 생성 완료: {}", pageable);
+        
+        Page<Post> posts = postRepository.findByCategoryName(categoryName, pageable);
+        log.info("DB 조회 완료: 총 {}개 게시글, 현재 페이지 {}개", posts.getTotalElements(), posts.getNumberOfElements());
+        
+        // 조회된 게시글들의 카테고리 정보 로그
+        posts.getContent().forEach(post -> {
+            log.info("게시글 ID: {}, 제목: {}, 카테고리: {}", 
+                post.getId(), post.getTitle(), 
+                post.getCategory() != null ? post.getCategory().getName() : "NULL");
+        });
+        
+        Page<PostDto.Response> result = posts.map(post -> PostDto.Response.from(post));
+        log.info("=== 카테고리별 게시글 조회 완료 ===");
+        return result;
+    }
+
+    // 카테고리 ID로 게시글 조회
+    public Page<PostDto.Response> getPostsByCategoryId(Long categoryId, int page, int size, String sortBy, String sortOrder) {
+        log.info("=== 카테고리 ID별 게시글 조회 시작 ===");
+        log.info("카테고리 ID: {}", categoryId);
+        log.info("페이지: {}, 크기: {}, 정렬: {}, 순서: {}", page, size, sortBy, sortOrder);
+        
+        Pageable pageable = createPageable(page, size, sortBy, sortOrder);
+        log.info("Pageable 생성 완료: {}", pageable);
+        
+        Page<Post> posts = postRepository.findByCategoryId(categoryId, pageable);
+        log.info("DB 조회 완료: 총 {}개 게시글, 현재 페이지 {}개", posts.getTotalElements(), posts.getNumberOfElements());
+        
+        // 조회된 게시글들의 카테고리 정보 로그
+        posts.getContent().forEach(post -> {
+            log.info("게시글 ID: {}, 제목: {}, 카테고리: {}", 
+                post.getId(), post.getTitle(), 
+                post.getCategory() != null ? post.getCategory().getName() : "NULL");
+        });
+        
+        Page<PostDto.Response> result = posts.map(post -> PostDto.Response.from(post));
+        log.info("=== 카테고리 ID별 게시글 조회 완료 ===");
+        return result;
+    }
+
+    // 영문 카테고리명으로 게시글 조회
+    public Page<PostDto.Response> getPostsByEnglishCategoryName(String englishName, int page, int size, String sortBy, String sortOrder) {
+        log.info("=== 영문 카테고리별 게시글 조회 시작 ===");
+        log.info("영문 카테고리명: {}", englishName);
+        log.info("페이지: {}, 크기: {}, 정렬: {}, 순서: {}", page, size, sortBy, sortOrder);
+        
+        Pageable pageable = createPageable(page, size, sortBy, sortOrder);
+        log.info("Pageable 생성 완료: {}", pageable);
+        
+        Page<Post> posts = postRepository.findByEnglishCategoryName(englishName, pageable);
+        log.info("DB 조회 완료: 총 {}개 게시글, 현재 페이지 {}개", posts.getTotalElements(), posts.getNumberOfElements());
+        
+        // 조회된 게시글들의 카테고리 정보 로그
+        posts.getContent().forEach(post -> {
+            log.info("게시글 ID: {}, 제목: {}, 카테고리: {}", 
+                post.getId(), post.getTitle(), 
+                post.getCategory() != null ? post.getCategory().getName() : "NULL");
+        });
+        
+        Page<PostDto.Response> result = posts.map(post -> PostDto.Response.from(post));
+        log.info("=== 영문 카테고리별 게시글 조회 완료 ===");
+        return result;
     }
 } 

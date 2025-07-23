@@ -123,4 +123,26 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     
     @Query("SELECT AVG(p.hotScore) FROM Post p WHERE p.isHot = true AND p.createdAt >= :startDate")
     Double getAverageHotScoreByPeriod(@Param("startDate") LocalDateTime startDate);
+
+    // ===== 카테고리별 게시글 조회 메서드 =====
+
+    // 카테고리명으로 게시글 조회
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.name = :categoryName ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryName(@Param("categoryName") String categoryName, Pageable pageable);
+
+    // 카테고리 ID로 게시글 조회
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.id = :categoryId ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    // 영문 카테고리명으로 게시글 조회
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.englishName = :englishName ORDER BY p.createdAt DESC")
+    Page<Post> findByEnglishCategoryName(@Param("englishName") String englishName, Pageable pageable);
+
+    // 카테고리별 HOT 게시글 조회
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.id = :categoryId AND p.isHot = true ORDER BY p.hotScore DESC, p.createdAt DESC")
+    Page<Post> findHotPostsByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
+
+    // 카테고리별 게시글 수 조회
+    @Query("SELECT COUNT(p) FROM Post p JOIN p.category c WHERE c.id = :categoryId")
+    long countByCategoryId(@Param("categoryId") Long categoryId);
 } 

@@ -111,6 +111,12 @@ public class CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + categoryId));
     }
 
+    // 카테고리명으로 Category 엔티티 조회 (내부용)
+    public Category getCategoryByName(String categoryName) {
+        return categoryRepository.findByName(categoryName)
+                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + categoryName));
+    }
+
     // 초기 카테고리 데이터 생성 (애플리케이션 시작 시)
     public void initializeDefaultCategories() {
         if (categoryRepository.count() == 0) {
