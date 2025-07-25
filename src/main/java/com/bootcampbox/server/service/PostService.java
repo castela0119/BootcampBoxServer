@@ -47,15 +47,19 @@ public class PostService {
     }
 
     public PostDto.Response createPost(User user, PostDto.CreateRequest request) {
+        // User 객체를 다시 조회하여 persistent 상태로 만듦
+        User persistentUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
         Post post = new Post();
-        post.setUser(user);
+        post.setUser(persistentUser);
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         
         // 작성 당시 사용자의 신분 type 저장 (Request에서 받은 값 우선, 없으면 사용자 정보에서)
         String authorUserType = (request.getAuthorUserType() != null && !request.getAuthorUserType().trim().isEmpty()) 
             ? request.getAuthorUserType() 
-            : user.getUserType();
+            : persistentUser.getUserType();
         post.setAuthorUserType(authorUserType);
         
         // 익명 여부는 사용자가 선택
@@ -154,10 +158,14 @@ public class PostService {
     }
 
     public PostDto.Response updatePost(User user, Long postId, PostDto.UpdateRequest request) {
+        // User 객체를 다시 조회하여 persistent 상태로 만듦
+        User persistentUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        if (!post.getUser().getUsername().equals(user.getUsername())) {
+        if (!post.getUser().getUsername().equals(persistentUser.getUsername())) {
             throw new IllegalArgumentException("게시글을 수정할 권한이 없습니다.");
         }
 
@@ -192,10 +200,14 @@ public class PostService {
     }
 
     public void deletePost(User user, Long postId) {
+        // User 객체를 다시 조회하여 persistent 상태로 만듦
+        User persistentUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        if (!post.getUser().getUsername().equals(user.getUsername())) {
+        if (!post.getUser().getUsername().equals(persistentUser.getUsername())) {
             throw new IllegalArgumentException("게시글을 삭제할 권한이 없습니다.");
         }
 

@@ -15,6 +15,8 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Arrays;
 import java.util.stream.Collectors;
+import com.bootcampbox.server.domain.User;
+import com.bootcampbox.server.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -23,12 +25,27 @@ import java.util.stream.Collectors;
 public class PostController {
 
     private final PostService postService;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<ApiResponse<PostDto.Response>> createPost(
             @CurrentUser String username,
             @Valid @RequestBody PostDto.CreateRequest request) {
         log.info("게시글 작성 요청: username={}, title={}", username, request.getTitle());
+        
+        // 공지사항 카테고리일 때 관리자 권한 확인
+        if (request.getCategory() != null && 
+            (request.getCategory().equals("NOTICE") || request.getCategory().equals("공지사항"))) {
+            // 현재 사용자가 관리자인지 확인
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            
+            if (!"관리자".equals(currentUser.getUserType())) {
+                log.error("공지사항 작성 권한 없음: username={}, userType={}", username, currentUser.getUserType());
+                return ResponseEntity.status(403).body(ApiResponse.error("공지사항은 관리자만 작성할 수 있습니다."));
+            }
+        }
+        
         PostDto.Response response = postService.createPost(username, request);
         return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 작성되었습니다.", response));
     }
@@ -108,6 +125,20 @@ public class PostController {
             @CurrentUser String username,
             @Valid @RequestBody PostDto.UpdateRequest request) {
         log.info("게시글 수정 요청: postId={}, username={}, title={}", postId, username, request.getTitle());
+        
+        // 공지사항 카테고리일 때 관리자 권한 확인
+        if (request.getCategory() != null && 
+            (request.getCategory().equals("NOTICE") || request.getCategory().equals("공지사항"))) {
+            // 현재 사용자가 관리자인지 확인
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            
+            if (!"관리자".equals(currentUser.getUserType())) {
+                log.error("공지사항 수정 권한 없음: username={}, userType={}", username, currentUser.getUserType());
+                return ResponseEntity.status(403).body(ApiResponse.error("공지사항은 관리자만 수정할 수 있습니다."));
+            }
+        }
+        
         PostDto.Response response = postService.updatePost(postId, username, request);
         return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 수정되었습니다.", response));
     }
@@ -117,8 +148,22 @@ public class PostController {
             @PathVariable Long postId,
             @CurrentUser String username) {
         log.info("게시글 삭제 요청: postId={}, username={}", postId, username);
+        
+        // 공지사항인지 확인하고 관리자 권한 확인
+        PostDto.Response post = postService.getPost(postId, username);
+        if (post.getCategory() != null && "notice".equals(post.getCategory().getEnglishName())) {
+            // 현재 사용자가 관리자인지 확인
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            
+            if (!"관리자".equals(currentUser.getUserType())) {
+                log.error("공지사항 삭제 권한 없음: username={}, userType={}", username, currentUser.getUserType());
+                return ResponseEntity.status(403).body(ApiResponse.error("공지사항은 관리자만 삭제할 수 있습니다."));
+            }
+        }
+        
         postService.deletePost(postId, username);
-        return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 삭제되었습니다."));
+        return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 삭제되었습니다.", null));
     }
 
     // 태그 검색 관련 API들
