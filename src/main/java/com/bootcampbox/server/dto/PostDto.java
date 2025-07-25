@@ -30,15 +30,21 @@ public class PostDto {
         private boolean isAnonymous = false; // 익명 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
         private Long categoryId; // 카테고리 ID
+        private String category; // 카테고리명 (영문)
 
         @Builder
-        public CreateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId) {
+        public CreateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId, String category) {
             this.title = title;
             this.content = content;
             this.tagNames = tagNames;
             this.isAnonymous = isAnonymous;
             this.authorUserType = authorUserType;
             this.categoryId = categoryId;
+            this.category = category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
         }
     }
 
@@ -55,15 +61,21 @@ public class PostDto {
         private boolean isAnonymous = false; // 익명 여부
         private String authorUserType; // 작성 당시 사용자의 신분 type
         private Long categoryId; // 카테고리 ID
+        private String category; // 카테고리명 (영문)
 
         @Builder
-        public UpdateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId) {
+        public UpdateRequest(String title, String content, List<String> tagNames, boolean isAnonymous, String authorUserType, Long categoryId, String category) {
             this.title = title;
             this.content = content;
             this.tagNames = tagNames;
             this.isAnonymous = isAnonymous;
             this.authorUserType = authorUserType;
             this.categoryId = categoryId;
+            this.category = category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
         }
     }
 
@@ -90,6 +102,7 @@ public class PostDto {
         // 카테고리 관련 필드
         private Long categoryId; // 카테고리 ID
         private String categoryName; // 카테고리명
+        private CategoryDto.Response category; // 카테고리 상세 정보
         
         // 좋아요 관련 필드
         private int likeCount; // 좋아요 수
@@ -127,6 +140,7 @@ public class PostDto {
                     .tagNames(tagNames)
                     .categoryId(post.getCategory() != null ? post.getCategory().getId() : null)
                     .categoryName(post.getCategory() != null ? post.getCategory().getName() : null)
+                    .category(post.getCategory() != null ? CategoryDto.Response.from(post.getCategory()) : null)
                     .likeCount(post.getLikeCount())
                     .isLiked(isLiked)
                     .isBookmarked(isBookmarked)

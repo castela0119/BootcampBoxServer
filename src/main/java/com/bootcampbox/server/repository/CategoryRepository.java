@@ -18,6 +18,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     // 카테고리명으로 조회
     Optional<Category> findByName(String name);
     
+    // 영문명으로 카테고리 조회
+    Optional<Category> findByEnglishName(String englishName);
+    
     // 활성화된 카테고리명으로 조회
     Optional<Category> findByNameAndIsActiveTrue(String name);
     

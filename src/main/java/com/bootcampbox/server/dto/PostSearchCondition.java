@@ -47,6 +47,7 @@ public class PostSearchCondition {
                category.equals("LOVE_COUNSEL") || 
                category.equals("INCIDENT") || 
                category.equals("VACATION") || 
-               category.equals("COMMUNITY_BOARD");
+               category.equals("COMMUNITY_BOARD") ||
+               category.equals("NOTICE");
     }
 } 

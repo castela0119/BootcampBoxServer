@@ -117,6 +117,12 @@ public class CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + categoryName));
     }
 
+    // 영문명으로 카테고리 조회
+    public Category getCategoryByEnglishName(String englishName) {
+        return categoryRepository.findByEnglishName(englishName)
+                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + englishName));
+    }
+
     // 초기 카테고리 데이터 생성 (애플리케이션 시작 시)
     public void initializeDefaultCategories() {
         if (categoryRepository.count() == 0) {

@@ -203,4 +203,41 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%')))")
     long countByCategoryAndSearchKeyword(@Param("category") String category, @Param("searchKeyword") String searchKeyword);
+
+    // ===== 추가 메서드들 (NoticeController에서 사용) =====
+    
+    // 카테고리별 게시글 조회 (기본)
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.englishName = :category ORDER BY p.createdAt DESC")
+    Page<Post> findByCategory(@Param("category") String category, Pageable pageable);
+    
+    // 카테고리별 게시글 조회 + 작성자 신분 필터
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.englishName = :category " +
+           "AND (:authorUserType IS NULL OR p.authorUserType = :authorUserType) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndAuthorUserType(
+            @Param("category") String category,
+            @Param("authorUserType") String authorUserType,
+            Pageable pageable);
+    
+    // 카테고리별 게시글 조회 + 태그 필터
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.category c JOIN p.tags t " +
+           "WHERE c.englishName = :category " +
+           "AND t.name IN :tagNames " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndTags(
+            @Param("category") String category,
+            @Param("tagNames") List<String> tagNames,
+            Pageable pageable);
+    
+    // 카테고리별 게시글 조회 + 작성자 신분 + 태그 필터
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.category c JOIN p.tags t " +
+           "WHERE c.englishName = :category " +
+           "AND (:authorUserType IS NULL OR p.authorUserType = :authorUserType) " +
+           "AND t.name IN :tagNames " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndAuthorUserTypeAndTags(
+            @Param("category") String category,
+            @Param("authorUserType") String authorUserType,
+            @Param("tagNames") List<String> tagNames,
+            Pageable pageable);
 } 

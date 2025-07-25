@@ -43,6 +43,10 @@ public class PostService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        return createPost(user, request);
+    }
+
+    public PostDto.Response createPost(User user, PostDto.CreateRequest request) {
         Post post = new Post();
         post.setUser(user);
         post.setTitle(request.getTitle());
@@ -60,8 +64,13 @@ public class PostService {
             post.setAnonymousNickname("익명");
         }
 
-        // 카테고리 설정
-        if (request.getCategoryId() != null) {
+        // 카테고리 설정 (category 필드 우선, 없으면 categoryId 사용)
+        if (request.getCategory() != null && !request.getCategory().trim().isEmpty()) {
+            // category 문자열을 DB 값으로 매핑
+            String dbCategory = mapCategoryToDbValue(request.getCategory());
+            Category category = categoryService.getCategoryByEnglishName(dbCategory);
+            post.setCategory(category);
+        } else if (request.getCategoryId() != null) {
             Category category = categoryService.getCategoryEntity(request.getCategoryId());
             post.setCategory(category);
         } else {
@@ -92,6 +101,11 @@ public class PostService {
         return PostDto.Response.from(post);
     }
 
+    // getPostById 메서드 추가 (NoticeController에서 사용)
+    public PostDto.Response getPostById(Long postId) {
+        return getPost(postId);
+    }
+
     public PostDto.Response getPost(Long postId, String username) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -113,6 +127,14 @@ public class PostService {
         return PostDto.Response.from(post, currentUser != null ? currentUser.getId() : null, isLiked, isBookmarked);
     }
 
+    // incrementViewCount 메서드 추가 (NoticeController에서 사용)
+    public void incrementViewCount(Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
+    }
+
     // 기존 메서드는 새로운 필터링 메서드로 대체
     public Page<PostDto.Response> getAllPosts(Pageable pageable) {
         return getAllPostsWithFilters(pageable.getPageNumber(), pageable.getPageSize(), null, null, null, null, null);
@@ -126,10 +148,16 @@ public class PostService {
     }
 
     public PostDto.Response updatePost(Long postId, String username, PostDto.UpdateRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        return updatePost(user, postId, request);
+    }
+
+    public PostDto.Response updatePost(User user, Long postId, PostDto.UpdateRequest request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        if (!post.getUser().getUsername().equals(username)) {
+        if (!post.getUser().getUsername().equals(user.getUsername())) {
             throw new IllegalArgumentException("게시글을 수정할 권한이 없습니다.");
         }
 
@@ -158,10 +186,16 @@ public class PostService {
     }
 
     public void deletePost(Long postId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        deletePost(user, postId);
+    }
+
+    public void deletePost(User user, Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        if (!post.getUser().getUsername().equals(username)) {
+        if (!post.getUser().getUsername().equals(user.getUsername())) {
             throw new IllegalArgumentException("게시글을 삭제할 권한이 없습니다.");
         }
 
@@ -223,9 +257,9 @@ public class PostService {
                     .collect(Collectors.toList());
             cond.setTagList(tagList);
         }
-        if (sortBy != null && !sortBy.trim().isEmpty()) {
-            cond.setSort(sortBy.trim());
-        }
+                    if (sortBy != null && !sortBy.trim().isEmpty()) {
+                cond.setSortBy(sortBy.trim());
+            }
 
         Page<Post> postPage = postRepository.searchPosts(cond, pageable);
         return postPage.map(PostDto.Response::from);
@@ -330,5 +364,160 @@ public class PostService {
         Page<PostDto.Response> result = posts.map(post -> PostDto.Response.from(post));
         log.info("=== 영문 카테고리별 게시글 조회 완료 ===");
         return result;
+    }
+
+    /**
+     * 카테고리 매핑 (요구사항 -> 실제 DB 값)
+     */
+    private String mapCategoryToDbValue(String category) {
+        if (category == null) {
+            throw new IllegalArgumentException("카테고리가 null입니다.");
+        }
+        
+        String normalizedCategory = category.trim();
+        
+        // 영문 카테고리명 매핑
+        switch (normalizedCategory.toUpperCase()) {
+            case "CAREER_COUNSEL":
+                return "career";
+            case "LOVE_COUNSEL":
+                return "love";
+            case "INCIDENT":
+                return "incident";
+            case "VACATION":
+                return "vacation";
+            case "COMMUNITY_BOARD":
+                return "community";
+            case "NOTICE":
+                return "notice";
+        }
+        
+        // 한글 카테고리명 매핑
+        switch (normalizedCategory) {
+            case "진로 상담":
+                return "career";
+            case "연애 상담":
+                return "love";
+            case "사건 사고":
+                return "incident";
+            case "휴가 어때":
+                return "vacation";
+            case "커뮤니티 탭 게시판":
+            case "커뮤니티":
+                return "community";
+            case "공지사항":
+                return "notice";
+        }
+        
+        throw new IllegalArgumentException("지원하지 않는 카테고리입니다: " + category);
+    }
+
+    // searchPostsByCategory 메서드 추가 (NoticeController에서 사용)
+    public PostDto.CategorySearchResponse searchPostsByCategory(
+            String category, String search, String authorUserType, 
+            List<String> tags, String sortBy, String sortOrder, int page, int size) {
+        
+        // 카테고리 매핑
+        String dbCategory = mapCategoryToDbValue(category);
+        
+        // 검색 조건 검증
+        if (search != null && !search.trim().isEmpty()) {
+            String trimmedSearch = search.trim();
+            if (trimmedSearch.length() < 2) {
+                throw new IllegalArgumentException("검색어는 2글자 이상 입력해주세요.");
+            }
+        }
+        
+        // 정렬 조건 검증
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            if (!isValidSortBy(sortBy.trim())) {
+                throw new IllegalArgumentException("지원하지 않는 정렬 기준입니다: " + sortBy);
+            }
+        }
+        
+        if (sortOrder != null && !sortOrder.trim().isEmpty()) {
+            if (!isValidSortOrder(sortOrder.trim())) {
+                throw new IllegalArgumentException("지원하지 않는 정렬 순서입니다: " + sortOrder);
+            }
+        }
+        
+        Pageable pageable = createPageable(page, size, sortBy, sortOrder);
+        Page<Post> postPage;
+        
+        // 검색 조건에 따른 쿼리 분기
+        if (search != null && !search.trim().isEmpty()) {
+            if (authorUserType != null && !authorUserType.trim().isEmpty()) {
+                if (tags != null && !tags.isEmpty()) {
+                    postPage = postRepository.findByCategoryAndSearchKeywordAndAuthorUserTypeAndTags(
+                            dbCategory, search.trim(), authorUserType.trim(), tags, pageable);
+                } else {
+                    postPage = postRepository.findByCategoryAndSearchKeywordAndAuthorUserType(
+                            dbCategory, search.trim(), authorUserType.trim(), pageable);
+                }
+            } else {
+                if (tags != null && !tags.isEmpty()) {
+                    postPage = postRepository.findByCategoryAndSearchKeywordAndTags(
+                            dbCategory, search.trim(), tags, pageable);
+                } else {
+                    postPage = postRepository.findByCategoryAndSearchKeyword(
+                            dbCategory, search.trim(), pageable);
+                }
+            }
+        } else {
+            if (authorUserType != null && !authorUserType.trim().isEmpty()) {
+                if (tags != null && !tags.isEmpty()) {
+                    postPage = postRepository.findByCategoryAndAuthorUserTypeAndTags(
+                            dbCategory, authorUserType.trim(), tags, pageable);
+                } else {
+                    postPage = postRepository.findByCategoryAndAuthorUserType(
+                            dbCategory, authorUserType.trim(), pageable);
+                }
+            } else {
+                if (tags != null && !tags.isEmpty()) {
+                    postPage = postRepository.findByCategoryAndTags(dbCategory, tags, pageable);
+                } else {
+                    postPage = postRepository.findByCategory(dbCategory, pageable);
+                }
+            }
+        }
+        
+        // 응답 생성
+        List<PostDto.Response> posts = postPage.getContent().stream()
+                .map(PostDto.Response::from)
+                .collect(Collectors.toList());
+        
+        PostDto.CategorySearchResponse.PaginationInfo pagination = PostDto.CategorySearchResponse.PaginationInfo.builder()
+                .currentPage(postPage.getNumber())
+                .totalPages(postPage.getTotalPages())
+                .totalElements(postPage.getTotalElements())
+                .size(postPage.getSize())
+                .hasNext(postPage.hasNext())
+                .hasPrevious(postPage.hasPrevious())
+                .build();
+        
+        PostDto.CategorySearchResponse.SearchInfo searchInfo = PostDto.CategorySearchResponse.SearchInfo.builder()
+                .searchKeyword(search)
+                .category(category)
+                .resultCount((int) postPage.getTotalElements())
+                .build();
+        
+        return PostDto.CategorySearchResponse.builder()
+                .posts(posts)
+                .pagination(pagination)
+                .searchInfo(searchInfo)
+                .build();
+    }
+
+    // 정렬 기준 유효성 검사 메서드
+    private boolean isValidSortBy(String sortBy) {
+        return sortBy.equals("createdAt") || 
+               sortBy.equals("likeCount") || 
+               sortBy.equals("viewCount") || 
+               sortBy.equals("commentCount");
+    }
+
+    // 정렬 순서 유효성 검사 메서드
+    private boolean isValidSortOrder(String sortOrder) {
+        return sortOrder.equals("asc") || sortOrder.equals("desc");
     }
 } 
