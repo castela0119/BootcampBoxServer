@@ -1,5 +1,7 @@
 package com.bootcampbox.server.controller;
 
+import com.bootcampbox.server.config.CurrentUser;
+import com.bootcampbox.server.dto.ApiResponse;
 import com.bootcampbox.server.dto.PostDto;
 import com.bootcampbox.server.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -7,12 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -23,123 +25,129 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public ResponseEntity<PostDto.Response> createPost(
+    public ResponseEntity<ApiResponse<PostDto.Response>> createPost(
+            @CurrentUser String username,
             @Valid @RequestBody PostDto.CreateRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 작성 요청: username={}, title={}", username, request.getTitle());
-            PostDto.Response response = postService.createPost(username, request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("게시글 작성 오류: ", e);
-            return ResponseEntity.badRequest().build();
-        }
+        log.info("게시글 작성 요청: username={}, title={}", username, request.getTitle());
+        PostDto.Response response = postService.createPost(username, request);
+        return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 작성되었습니다.", response));
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<PostDto.Response> getPost(@PathVariable Long postId) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 조회 요청: postId={}, username={}", postId, username);
-            PostDto.Response response = postService.getPost(postId, username);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("게시글 조회 오류: ", e);
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<ApiResponse<PostDto.Response>> getPost(
+            @PathVariable Long postId,
+            @CurrentUser String username) {
+        log.info("게시글 조회 요청: postId={}, username={}", postId, username);
+        PostDto.Response response = postService.getPost(postId, username);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
-    public ResponseEntity<Page<PostDto.Response>> getAllPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+    public ResponseEntity<ApiResponse<Object>> getAllPosts(
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String authorUserType,
             @RequestParam(required = false) String tags, // 복수 태그 (콤마 구분)
             @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String sortOrder) {
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         
-        log.info("게시글 목록 조회 요청: page={}, size={}, search={}, authorUserType={}, tags={}, sortBy={}, sortOrder={}", 
-                page, size, search, authorUserType, tags, sortBy, sortOrder);
+        log.info("=== 게시글 목록 조회 요청 시작 ===");
+        log.info("카테고리: {}, 검색어: {}, 작성자신분: {}, 태그: {}, 정렬: {}, 순서: {}, 페이지: {}, 크기: {}", 
+                category, search, authorUserType, tags, sortBy, sortOrder, page, size);
         
-        Page<PostDto.Response> response = postService.getAllPostsWithFilters(
-                page, size, search, authorUserType, tags, sortBy, sortOrder);
-        return ResponseEntity.ok(response);
+        try {
+            // 태그 리스트 변환
+            List<String> tagList = null;
+            if (tags != null && !tags.trim().isEmpty()) {
+                tagList = Arrays.stream(tags.split(","))
+                        .map(String::trim)
+                        .filter(tag -> !tag.isEmpty())
+                        .collect(Collectors.toList());
+            }
+            
+            // 카테고리가 지정된 경우 카테고리별 검색 실행
+            if (category != null && !category.trim().isEmpty()) {
+                PostDto.CategorySearchResponse response = postService.searchPostsByCategory(
+                        category, search, authorUserType, tagList, sortBy, sortOrder, page, size);
+                
+                log.info("=== 카테고리별 게시글 목록 조회 요청 완료 ===");
+                return ResponseEntity.ok(ApiResponse.success(response));
+            } else {
+                // 카테고리가 지정되지 않은 경우 기존 전체 검색 사용
+                Page<PostDto.Response> response = postService.getAllPostsWithFilters(
+                        page, size, search, authorUserType, tags, sortBy, sortOrder);
+                
+                log.info("=== 전체 게시글 목록 조회 요청 완료 ===");
+                return ResponseEntity.ok(ApiResponse.success(response));
+            }
+            
+        } catch (IllegalArgumentException e) {
+            log.error("게시글 목록 조회 오류: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("게시글 목록 조회 중 예상치 못한 오류: ", e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("서버 오류가 발생했습니다."));
+        }
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<PostDto.Response>> getPostsByUser(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> getPostsByUser(
             @PathVariable Long userId, 
             Pageable pageable) {
         log.info("사용자별 게시글 목록 조회 요청: userId={}, page={}, size={}", 
                 userId, pageable.getPageNumber(), pageable.getPageSize());
         Page<PostDto.Response> response = postService.getPostsByUser(userId, pageable);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/{postId}")
-    public ResponseEntity<PostDto.Response> updatePost(
+    public ResponseEntity<ApiResponse<PostDto.Response>> updatePost(
             @PathVariable Long postId,
+            @CurrentUser String username,
             @Valid @RequestBody PostDto.UpdateRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 수정 요청: postId={}, username={}, title={}", postId, username, request.getTitle());
-            PostDto.Response response = postService.updatePost(postId, username, request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("게시글 수정 오류: ", e);
-            return ResponseEntity.badRequest().build();
-        }
+        log.info("게시글 수정 요청: postId={}, username={}, title={}", postId, username, request.getTitle());
+        PostDto.Response response = postService.updatePost(postId, username, request);
+        return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 수정되었습니다.", response));
     }
 
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            
-            log.info("게시글 삭제 요청: postId={}, username={}", postId, username);
-            postService.deletePost(postId, username);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            log.error("게시글 삭제 오류: ", e);
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+            @PathVariable Long postId,
+            @CurrentUser String username) {
+        log.info("게시글 삭제 요청: postId={}, username={}", postId, username);
+        postService.deletePost(postId, username);
+        return ResponseEntity.ok(ApiResponse.success("게시글이 성공적으로 삭제되었습니다."));
     }
 
     // 태그 검색 관련 API들
     @GetMapping("/search/tag/{tagName}")
-    public ResponseEntity<Page<PostDto.Response>> getPostsByTag(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> getPostsByTag(
             @PathVariable String tagName,
             Pageable pageable) {
         log.info("태그별 게시글 검색: tagName={}", tagName);
         Page<PostDto.Response> response = postService.getPostsByTag(tagName, pageable);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/search/tags")
-    public ResponseEntity<Page<PostDto.Response>> getPostsByTags(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> getPostsByTags(
             @RequestParam List<String> tagNames,
             @RequestParam(defaultValue = "OR") String operator, // OR 또는 AND
             Pageable pageable) {
         log.info("다중 태그 게시글 검색: tagNames={}, operator={}", tagNames, operator);
         Page<PostDto.Response> response = postService.getPostsByTags(tagNames, operator, pageable);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/search/keyword")
-    public ResponseEntity<Page<PostDto.Response>> searchPostsByKeyword(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> searchPostsByKeyword(
             @RequestParam String keyword,
             Pageable pageable) {
         log.info("키워드 게시글 검색: keyword={}", keyword);
         Page<PostDto.Response> response = postService.searchPostsByKeyword(keyword, pageable);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // ===== 카테고리별 게시글 API =====
@@ -211,7 +219,7 @@ public class PostController {
 
     // 카테고리별 게시글 조회 (범용 API)
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<Page<PostDto.Response>> getPostsByCategoryId(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> getPostsByCategoryId(
             @PathVariable Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -220,12 +228,12 @@ public class PostController {
         log.info("카테고리별 게시글 조회 요청: categoryId={}, page={}, size={}, sortBy={}, sortOrder={}", 
                 categoryId, page, size, sortBy, sortOrder);
         Page<PostDto.Response> response = postService.getPostsByCategoryId(categoryId, page, size, sortBy, sortOrder);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 영문 카테고리명으로 게시글 조회 (범용 API)
     @GetMapping("/category/english/{englishName}")
-    public ResponseEntity<Page<PostDto.Response>> getPostsByEnglishCategoryName(
+    public ResponseEntity<ApiResponse<Page<PostDto.Response>>> getPostsByEnglishCategoryName(
             @PathVariable String englishName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -234,6 +242,6 @@ public class PostController {
         log.info("영문 카테고리별 게시글 조회 요청: englishName={}, page={}, size={}, sortBy={}, sortOrder={}", 
                 englishName, page, size, sortBy, sortOrder);
         Page<PostDto.Response> response = postService.getPostsByEnglishCategoryName(englishName, page, size, sortBy, sortOrder);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 } 

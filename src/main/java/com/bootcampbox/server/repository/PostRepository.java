@@ -145,4 +145,62 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
     // 카테고리별 게시글 수 조회
     @Query("SELECT COUNT(p) FROM Post p JOIN p.category c WHERE c.id = :categoryId")
     long countByCategoryId(@Param("categoryId") Long categoryId);
+
+    // ===== 카테고리별 검색 메서드들 =====
+    
+    // 카테고리별 검색 (제목/내용)
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.englishName = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndSearchKeyword(
+            @Param("category") String category, 
+            @Param("searchKeyword") String searchKeyword, 
+            Pageable pageable);
+    
+    // 카테고리별 검색 (제목/내용) + 작성자 신분 필터
+    @Query("SELECT p FROM Post p JOIN p.category c WHERE c.englishName = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) " +
+           "AND (:authorUserType IS NULL OR p.authorUserType = :authorUserType) " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndSearchKeywordAndAuthorUserType(
+            @Param("category") String category, 
+            @Param("searchKeyword") String searchKeyword,
+            @Param("authorUserType") String authorUserType,
+            Pageable pageable);
+    
+    // 카테고리별 검색 (제목/내용) + 태그 필터
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.category c JOIN p.tags t " +
+           "WHERE c.englishName = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) " +
+           "AND t.name IN :tagNames " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndSearchKeywordAndTags(
+            @Param("category") String category, 
+            @Param("searchKeyword") String searchKeyword,
+            @Param("tagNames") List<String> tagNames,
+            Pageable pageable);
+    
+    // 카테고리별 검색 (제목/내용) + 작성자 신분 + 태그 필터
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.category c JOIN p.tags t " +
+           "WHERE c.englishName = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) " +
+           "AND (:authorUserType IS NULL OR p.authorUserType = :authorUserType) " +
+           "AND t.name IN :tagNames " +
+           "ORDER BY p.createdAt DESC")
+    Page<Post> findByCategoryAndSearchKeywordAndAuthorUserTypeAndTags(
+            @Param("category") String category, 
+            @Param("searchKeyword") String searchKeyword,
+            @Param("authorUserType") String authorUserType,
+            @Param("tagNames") List<String> tagNames,
+            Pageable pageable);
+    
+    // 카테고리별 게시글 수 조회 (검색어 포함)
+    @Query("SELECT COUNT(p) FROM Post p JOIN p.category c WHERE c.englishName = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :searchKeyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :searchKeyword, '%')))")
+    long countByCategoryAndSearchKeyword(@Param("category") String category, @Param("searchKeyword") String searchKeyword);
 } 

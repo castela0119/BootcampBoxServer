@@ -8,6 +8,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -131,6 +133,43 @@ public class PostDto {
                     .commentCount(post.getCommentCount())
                     .viewCount(post.getViewCount())
                     .build();
+        }
+    }
+
+    // 카테고리별 검색 결과 응답 DTO
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class CategorySearchResponse {
+        private List<Response> posts;
+        private PaginationInfo pagination;
+        private SearchInfo searchInfo;
+        
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        @Builder
+        public static class PaginationInfo {
+            private int currentPage;
+            private int totalPages;
+            private long totalElements;
+            private int size;
+            private boolean hasNext;
+            private boolean hasPrevious;
+        }
+        
+        @Getter
+        @Setter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        @Builder
+        public static class SearchInfo {
+            private String searchKeyword;
+            private String category;
+            private int resultCount;
         }
     }
 } 

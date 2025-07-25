@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import com.bootcampbox.server.exception.AdminLoginException;
+import com.bootcampbox.server.exception.InvalidSearchKeywordException;
 
 @RestControllerAdvice
 @Slf4j
@@ -137,6 +138,19 @@ public class GlobalExceptionHandler {
         errorResponse.put("error", "PropertyValueException");
         errorResponse.put("timestamp", LocalDateTime.now().toString());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidSearchKeywordException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidSearchKeywordException(InvalidSearchKeywordException e) {
+        log.error("InvalidSearchKeywordException 발생: ", e);
+        
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("message", e.getMessage());
+        errorResponse.put("error", "InvalidSearchKeywordException");
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

@@ -62,6 +62,7 @@ public class CategoryDto {
     public static class Response {
         private Long id;
         private String name;
+        private String englishName;
         private String description;
         
         @JsonProperty("isAnonymous")
@@ -79,6 +80,7 @@ public class CategoryDto {
             return Response.builder()
                     .id(category.getId())
                     .name(category.getName())
+                    .englishName(category.getEnglishName())
                     .description(category.getDescription())
                     .isAnonymous(category.isAnonymous())
                     .sortOrder(category.getSortOrder())

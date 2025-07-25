@@ -58,7 +58,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         }
 
         // 정렬
-        OrderSpecifier<?> orderSpecifier = getOrderSpecifier(cond.getSort(), post);
+        OrderSpecifier<?> orderSpecifier = getOrderSpecifier(cond.getSortBy(), post);
 
         // 쿼리
         JPAQuery<Post> query = queryFactory.selectFrom(post)
